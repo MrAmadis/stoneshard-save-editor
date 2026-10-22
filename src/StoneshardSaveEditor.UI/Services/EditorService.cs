@@ -99,6 +99,17 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         return Current;
     }
 
+    /// <summary>Goes back to the save list; unsaved edits are dropped.</summary>
+    public void Close()
+    {
+        lock (_lock)
+        {
+            _session = null;
+            _skills = null;
+        }
+        Changed?.Invoke();
+    }
+
     public SessionView Reload()
     {
         var slot = Session.Slot;
@@ -254,7 +265,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             .ToList();
 
         return new SessionView(
-            s.Slot.CharacterFolder, s.Slot.SlotFolder, s.Slot.NameKey, Names.Pretty(s.Slot.LocationKey, files?.Localization),
+            s.Slot.CharacterFolder, s.Slot.SlotFolder, s.Slot.NameKey, s.Slot.AvatarSprite, Names.Pretty(s.Slot.LocationKey, files?.Localization),
             s.ReadOnly, s.ReadOnlyReason, s.ChangeCount, files is not null,
             new CharacterEditor(s).Read(), inventory.Gold(), inventory.Read(), InventoryEditor.BagRows,
             trees, rulesAvailable, reputation);

@@ -1,0 +1,111 @@
+@inject EditorService EditorService
+@inject IAssetUrls AssetUrls
+
+<div class="picker">
+    <header class="picker-header">
+        <h1>Stoneshard Save Editor</h1>
+        <p class="muted">Choose a save to edit. Every save to the game keeps a backup of the previous version.</p>
+    </header>
+
+    @if (!_setup.SavesFound)
+    {
+        <Banner Kind="error">No Stoneshard saves found at @_setup.SavesRoot</Banner>
+    }
+    @if (!_setup.GameFound)
+    {
+        <Banner Kind="warn">
+            <span>Game files not found. Item icons, the item catalog and skills need them.@(_setup.GameError is null ? "" : $" ({_setup.GameError})")</span>
+            <button class="btn choose-game" @onclick="ChooseGame">Choose game folder…</button>
+        </Banner>
+    }
+    @if (_running)
+    {
+        <Banner>Stoneshard is running. Close the game before saving.</Banner>
+    }
+    @if (_error is not null)
+    {
+        <Banner Kind="error">@_error</Banner>
+    }
+
+    <div class="characters">
+        @foreach (var character in _characters)
+        {
+            <section class="panel character">
+                <div class="who">
+                    <Icon Sprite="@character.AvatarSprite" Width="74" Height="100" Alt="@character.Name" Class="portrait" />
+                    <div>
+                        <h2>@character.Name</h2>
+                        <div class="muted">@Subtitle(character)</div>
+                    </div>
+                </div>
+                <div class="slots">
+                    @foreach (var slot in character.Slots)
+                    {
+                        var c = character.Folder;
+                        var s = slot.Folder;
+                        <button class="slot @(slot.Status == SlotStatus.Ok ? "" : "slot-problem")" data-slot="@($"{c}/{s}")" @onclick="() => Open(c, s)">
+                            <img class="preview" src="@AssetUrls.Preview(c, s)" alt="" draggable="false" />
+                            <span class="slot-text">
+                                <b>@slot.DisplayName</b>
+                                <span class="muted">@slot.Location · @slot.SavedAtLocal.ToString("MMM d, HH:mm", CultureInfo.InvariantCulture)</span>
+                                @if (slot.StatusMessage is not null)
+                                {
+                                    <span class="slot-warning">⚠ @slot.StatusMessage</span>
+                                }
+                            </span>
+                        </button>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@code {
+    private SetupView _setup = new("", true, null, true, null);
+    private IReadOnlyList<CharacterView> _characters = [];
+    private bool _running;
+    private string? _error;
+
+    protected override void OnInitialized() => Load();
+
+    private void Load()
+    {
+        _setup = EditorService.Setup();
+        _characters = EditorService.Characters();
+        _running = EditorService.GameRunning();
+    }
+
+    private static string Subtitle(CharacterView c) =>
+        string.Join(" · ", new[] { c.ClassName, c.Level is { } level ? $"Level {level}" : null }.Where(x => x is not null));
+
+    private void Open(string character, string slot)
+    {
+        try
+        {
+            _error = null;
+            EditorService.Open(character, slot);
+        }
+        catch (EditRejectedException e)
+        {
+            _error = e.Message;
+        }
+    }
+
+    private void ChooseGame()
+    {
+        var path = EditorService.BrowseForGameDir();
+        if (path is null)
+            return;
+        try
+        {
+            _error = null;
+            EditorService.SetGameDir(path);
+            Load();
+        }
+        catch (EditRejectedException e)
+        {
+            _error = e.Message;
+        }
+    }
+}

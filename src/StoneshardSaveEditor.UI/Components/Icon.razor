@@ -1,0 +1,11 @@
+@inject IAssetUrls AssetUrls
+
+<img class="px @Class" src="@AssetUrls.Icon(Sprite)" alt="@Alt" style="width:@(Width)px;height:@(Height)px" draggable="false" />
+
+@code {
+    [Parameter, EditorRequired] public string Sprite { get; set; } = "";
+    [Parameter] public int Width { get; set; }
+    [Parameter] public int Height { get; set; }
+    [Parameter] public string Alt { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+}

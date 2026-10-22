@@ -20,6 +20,7 @@ public sealed record SessionView(
     string CharacterFolder,
     string SlotFolder,
     string Name,
+    string AvatarSprite,
     string Location,
     bool ReadOnly,
     string? ReadOnlyReason,

@@ -105,6 +105,20 @@ public class EditorServiceTests
     }
 
     [Fact]
+    public void Close_returns_to_no_session()
+    {
+        var h = Start();
+        h.Editor.Open("character_2", "exitsave_1");
+        var fired = 0;
+        h.Editor.Changed += () => fired++;
+
+        h.Editor.Close();
+
+        Assert.False(h.Editor.IsOpen);
+        Assert.Equal(1, fired);
+    }
+
+    [Fact]
     public void Changed_event_fires_on_edits()
     {
         var h = Start();

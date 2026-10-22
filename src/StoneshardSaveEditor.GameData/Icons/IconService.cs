@@ -9,6 +9,9 @@ public sealed partial class IconService(SpriteTable sprites, TexturePages pages,
 {
     private readonly Lock _lock = new();
 
+    /// <summary>Where this service writes its PNGs (<c>&lt;sprite&gt;.png</c>).</summary>
+    public string CacheDir { get; } = cacheDir;
+
     /// <summary>A cache folder tied to one exact <c>data.win</c>, so a game update starts a fresh cache.</summary>
     public static string CacheDirFor(string cacheRoot, string dataWinPath)
     {
@@ -23,7 +26,7 @@ public sealed partial class IconService(SpriteTable sprites, TexturePages pages,
     {
         if (!SpriteName().IsMatch(sprite))
             return null;
-        var cached = Path.Combine(cacheDir, sprite + ".png");
+        var cached = Path.Combine(CacheDir, sprite + ".png");
         if (File.Exists(cached))
             return File.ReadAllBytes(cached);
 
@@ -32,7 +35,7 @@ public sealed partial class IconService(SpriteTable sprites, TexturePages pages,
             return null;
         var png = Png.Encode(image);
 
-        Directory.CreateDirectory(cacheDir);
+        Directory.CreateDirectory(CacheDir);
         var tmp = cached + "." + Guid.NewGuid().ToString("N") + ".tmp";
         File.WriteAllBytes(tmp, png);
         File.Move(tmp, cached, overwrite: true);

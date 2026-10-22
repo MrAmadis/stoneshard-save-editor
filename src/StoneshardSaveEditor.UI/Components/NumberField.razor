@@ -1,0 +1,49 @@
+<span class="number-field">
+    <input type="text" inputmode="decimal" value="@_text" @onchange="OnChange" aria-invalid="@(_error is not null)" />
+    @if (_error is not null)
+    {
+        <span class="field-error">@_error</span>
+    }
+</span>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public bool Whole { get; set; }
+    [Parameter] public double Min { get; set; } = double.MinValue;
+    [Parameter] public double Max { get; set; } = double.MaxValue;
+    [Parameter] public EventCallback<double> OnCommit { get; set; }
+
+    private string _text = "";
+    private string? _error;
+
+    protected override void OnParametersSet()
+    {
+        if (_error is null)
+            _text = Format(Value);
+    }
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString()?.Trim() ?? "";
+        if (!double.TryParse(_text, NumberStyles.Float, CultureInfo.CurrentCulture, out var value)
+            && !double.TryParse(_text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+        {
+            _error = "Enter a number";
+            return;
+        }
+        if (Whole && value != Math.Floor(value))
+        {
+            _error = "Enter a whole number";
+            return;
+        }
+        if (value < Min || value > Max)
+        {
+            _error = $"Enter a number between {Format(Min)} and {Format(Max)}";
+            return;
+        }
+        _error = null;
+        await OnCommit.InvokeAsync(value);
+    }
+
+    private static string Format(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

@@ -49,6 +49,7 @@ public class IconServiceTests
         Assert.Equal(first, second);
         Assert.Equal(0, pages.DecodeCount);
         Assert.True(File.Exists(Path.Combine(cache, "s_inv_salve.png")));
+        Assert.Equal(cache, new IconService(GameFiles.Sprites, pages, cache).CacheDir);
     }
 
     [Fact]

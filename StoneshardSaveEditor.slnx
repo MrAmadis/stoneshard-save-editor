@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/StoneshardSaveEditor.App/StoneshardSaveEditor.App.csproj" />
     <Project Path="src/StoneshardSaveEditor.Core/StoneshardSaveEditor.Core.csproj" />
     <Project Path="src/StoneshardSaveEditor.GameData/StoneshardSaveEditor.GameData.csproj" />
     <Project Path="src/StoneshardSaveEditor.UI/StoneshardSaveEditor.UI.csproj" />

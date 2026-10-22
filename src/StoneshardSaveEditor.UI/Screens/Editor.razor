@@ -1,0 +1,157 @@
+@implements IDisposable
+@inject EditorService EditorService
+
+@{
+    var s = EditorService.Current;
+}
+<div class="editor">
+    <header class="editor-header">
+        <button class="btn back" @onclick="Back" title="Back to all saves">◂ Saves</button>
+        <Icon Sprite="@s.AvatarSprite" Width="37" Height="50" Alt="@s.Name" />
+        <div class="who">
+            <b>@s.Name</b>
+            <span class="muted">@Names.SlotDisplayName(s.SlotFolder) · @s.Location</span>
+        </div>
+        <nav class="tabs">
+            @foreach (var tab in Tabs)
+            {
+                var t = tab;
+                <button class="tab @(t == _tab ? "on" : "")" @onclick="() => _tab = t">@t</button>
+            }
+        </nav>
+        <div class="actions">
+            @if (s.ChangeCount > 0)
+            {
+                <span class="muted changes">@(s.ChangeCount == 1 ? "1 unsaved change" : $"{s.ChangeCount} unsaved changes")</span>
+            }
+            <button class="btn undo" disabled="@(s.ChangeCount == 0)" @onclick="Undo">Undo all</button>
+            <button class="btn backups" @onclick="() => _showBackups = true">Backups</button>
+            <button class="btn gold save" disabled="@(_running || s.ReadOnly || s.ChangeCount == 0)" @onclick="Save">Save to game</button>
+        </div>
+    </header>
+
+    @if (_running)
+    {
+        <Banner>Stoneshard is running. Close the game before saving.</Banner>
+    }
+    @if (s.ReadOnly)
+    {
+        <Banner Kind="error">This save is read-only: @s.ReadOnlyReason</Banner>
+    }
+    @if (!s.GameFound)
+    {
+        <Banner Kind="warn">Game files not found: icons, the item catalog and skills are unavailable.</Banner>
+    }
+    @if (_confirmBack)
+    {
+        <Banner Kind="warn">
+            <span>Leave this save and discard @s.ChangeCount unsaved @(s.ChangeCount == 1 ? "change" : "changes")?</span>
+            <button class="btn discard" @onclick="Discard">Discard and leave</button>
+            <button class="btn" @onclick="() => _confirmBack = false">Stay</button>
+        </Banner>
+    }
+    @if (_notice is var (kind, text))
+    {
+        <Banner Kind="@kind">
+            <span>@text</span>
+            @if (_offerReload)
+            {
+                <button class="btn reload" @onclick="Undo">Reload</button>
+            }
+        </Banner>
+    }
+
+    <main class="tab-body">
+        @switch (_tab)
+        {
+            default:
+                <p class="muted placeholder">The @_tab tab is coming in the next build step.</p>
+                break;
+        }
+    </main>
+
+    @if (_showBackups)
+    {
+        <BackupsDialog OnClose="() => _showBackups = false" />
+    }
+</div>
+
+@code {
+    private static readonly string[] Tabs = ["Character", "Inventory", "Skills", "Reputation"];
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
+
+    private string _tab = Tabs[0];
+    private bool _running;
+    private bool _showBackups;
+    private bool _confirmBack;
+    private bool _offerReload;
+    private (string Kind, string Text)? _notice;
+    private readonly CancellationTokenSource _stop = new();
+
+    protected override void OnInitialized()
+    {
+        EditorService.Changed += OnChanged;
+        _running = EditorService.GameRunning();
+        _ = PollGame();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Re-checks every few seconds whether Stoneshard is running, which blocks saving.</summary>
+    private async Task PollGame()
+    {
+        using var timer = new PeriodicTimer(PollInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_stop.Token))
+            {
+                var running = EditorService.GameRunning();
+                if (running == _running)
+                    continue;
+                _running = running;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void Save()
+    {
+        var result = EditorService.Save();
+        _offerReload = result == SaveResult.ChangedOnDisk;
+        _notice = result switch
+        {
+            SaveResult.Saved => ("info", "Saved. A backup of the previous version was kept."),
+            SaveResult.GameRunning => ("warn", "Stoneshard is running. Close the game before saving."),
+            SaveResult.ChangedOnDisk => ("error", "The game changed this save after you opened it. Reload to get the game's version; your unsaved edits will be lost."),
+            _ => ("error", $"This save is read-only: {EditorService.Current.ReadOnlyReason}"),
+        };
+        _running = result == SaveResult.GameRunning || _running;
+    }
+
+    private void Undo()
+    {
+        EditorService.Reload();
+        _notice = null;
+        _offerReload = false;
+    }
+
+    private void Back()
+    {
+        if (EditorService.Current.ChangeCount > 0)
+            _confirmBack = true;
+        else
+            EditorService.Close();
+    }
+
+    private void Discard() => EditorService.Close();
+
+    public void Dispose()
+    {
+        EditorService.Changed -= OnChanged;
+        _stop.Cancel();
+        _stop.Dispose();
+    }
+}

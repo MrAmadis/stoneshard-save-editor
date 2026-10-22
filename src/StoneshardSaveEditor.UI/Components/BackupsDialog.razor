@@ -1,0 +1,49 @@
+@inject EditorService EditorService
+
+<div class="dialog-backdrop" @onclick="OnClose">
+    <div class="dialog panel" @onclick:stopPropagation="true" role="dialog" aria-label="Backups">
+        <h3>Backups of this save</h3>
+        <p class="muted">A backup is made every time you save to the game or restore. Restoring replaces the save with the backup (after backing up the current one).</p>
+        @if (_error is not null)
+        {
+            <Banner Kind="error">@_error</Banner>
+        }
+        @if (_backups.Count == 0)
+        {
+            <p class="muted">No backups yet.</p>
+        }
+        <ul class="backup-list">
+            @foreach (var backup in _backups)
+            {
+                var b = backup;
+                <li>
+                    <span>@b.CreatedUtc.ToLocalTime().ToString("MMM d, HH:mm:ss", CultureInfo.InvariantCulture)</span>
+                    <button class="btn restore" @onclick="() => Restore(b)">Restore</button>
+                </li>
+            }
+        </ul>
+        <div class="dialog-actions"><button class="btn" @onclick="OnClose">Close</button></div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<BackupInfo> _backups = [];
+    private string? _error;
+
+    protected override void OnInitialized() => _backups = EditorService.Backups();
+
+    private async Task Restore(BackupInfo backup)
+    {
+        try
+        {
+            EditorService.Restore(backup.Path);
+            await OnClose.InvokeAsync();
+        }
+        catch (EditRejectedException e)
+        {
+            _error = e.Message;
+        }
+    }
+}
