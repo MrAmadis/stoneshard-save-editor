@@ -5,4 +5,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/StoneshardSaveEditor.Core.Tests/StoneshardSaveEditor.Core.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/StoneshardSaveEditor.Lab/StoneshardSaveEditor.Lab.csproj" />
+  </Folder>
 </Solution>

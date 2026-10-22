@@ -1,0 +1,102 @@
+using System.Text;
+using System.Text.RegularExpressions;
+using StoneshardSaveEditor.Core.Files;
+using StoneshardSaveEditor.Core.Json;
+
+// Developer tool for in-game experiments: test characters, inspecting and diffing saves.
+// It only ever creates new character folders and rewrites characters.map (after a backup).
+
+if (args.Length == 0)
+    return Usage();
+
+var options = ParseOptions(args.Skip(1).ToArray());
+try
+{
+    return args[0] switch
+    {
+        "clone-test-character" => CloneTestCharacter(options),
+        "point-continue" => PointContinue(options),
+        "dump" => Dump(options),
+        "diff" => DiffFiles(options),
+        _ => Usage(),
+    };
+}
+catch (Exception e) when (e is ArgumentException or SaveFormatException or IOException or FormatException)
+{
+    Console.Error.WriteLine($"error: {e.Message}");
+    return 1;
+}
+
+static int CloneTestCharacter(Dictionary<string, string> o)
+{
+    var created = TestCharacterCloner.Clone(Required(o, "root"), Required(o, "from"), Required(o, "slot"), o.GetValueOrDefault("label"));
+    Console.WriteLine(created);
+    return 0;
+}
+
+static int PointContinue(Dictionary<string, string> o)
+{
+    TestCharacterCloner.PointContinue(Required(o, "root"), Required(o, "character"), Required(o, "slot"), BackupService.DefaultRoot);
+    Console.WriteLine($"Continue now loads {o["character"]}/{o["slot"]}");
+    return 0;
+}
+
+static int Dump(Dictionary<string, string> o)
+{
+    var node = Load(Required(o, "file"));
+    if (o.TryGetValue("path", out var path))
+        node = Navigate(node, path);
+    Console.WriteLine(Encoding.UTF8.GetString(GmJson.Write(node)));
+    return 0;
+}
+
+static int DiffFiles(Dictionary<string, string> o)
+{
+    var lines = GmDiff.Diff(Load(Required(o, "a")), Load(Required(o, "b")));
+    foreach (var line in lines)
+        Console.WriteLine(line);
+    Console.Error.WriteLine($"{lines.Count} difference(s)");
+    return 0;
+}
+
+static GmNode Load(string file) => GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(file)).Json);
+
+static GmNode Navigate(GmNode node, string path)
+{
+    foreach (Match m in Regex.Matches(path, @"([^.\[\]]+)|\[(\d+)\]"))
+    {
+        node = m.Groups[1].Success
+            ? (node as GmObject)?[m.Groups[1].Value] ?? throw new ArgumentException($"no key '{m.Groups[1].Value}' in path {path}")
+            : node is GmArray a && int.Parse(m.Groups[2].Value) is var i && i < a.Items.Count
+                ? a.Items[i]
+                : throw new ArgumentException($"index [{m.Groups[2].Value}] out of range in path {path}");
+    }
+    return node;
+}
+
+static Dictionary<string, string> ParseOptions(string[] rest)
+{
+    var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    for (var i = 0; i + 1 < rest.Length; i += 2)
+    {
+        if (!rest[i].StartsWith("--"))
+            throw new ArgumentException($"expected an option, got '{rest[i]}'");
+        options[rest[i][2..]] = rest[i + 1];
+    }
+    return options;
+}
+
+static string Required(Dictionary<string, string> o, string name) =>
+    o.TryGetValue(name, out var v) ? v : throw new ArgumentException($"missing --{name}");
+
+static int Usage()
+{
+    Console.Error.WriteLine("""
+        usage:
+          clone-test-character --root <characters_v1> --from <character_N> --slot <slot> [--label <locationKey>]
+          point-continue       --root <characters_v1> --character <character_N> --slot <slot>
+          dump                 --file <save file> [--path a.b[3]]
+          diff                 --a <data.sav> --b <data.sav>
+        """);
+    return 2;
+}
