@@ -55,7 +55,7 @@ A save editor for the game **Stoneshard** that lets the owner change their chara
 
 ## 5. Constraints
 
-- **Stack: .NET backend + React UI** (owner's choice).
+- **Stack: .NET with a Blazor Hybrid UI** (owner's choice). The owner first asked for .NET + React, then switched to Blazor Hybrid on 2026-10-22: for a desktop-only app, React needed a local web server, an auth token, an npm build and duplicated data types, all of which Blazor Hybrid avoids.
 - **Machine:**
   - Windows 11, which ships the WebView2 runtime.
   - Installed toolchain: .NET SDK 8.0.302 and 10.0.401, Node 24.20, npm 11.19.
@@ -303,8 +303,10 @@ The approved mockups are in `docs/superpowers/specs/mockups/`. Their images came
 
 ## 9. How it's built: decided parts
 
-- **.NET backend + React frontend** (owner).
-- **A single self-contained `.exe`.** It hosts the built React app in a native window through WebView2 (Photino.NET, or WinForms plus WebView2, at the builder's choice). It needs no .NET or Node on the user's machine. *(my call on the WebView2 approach; the owner approved the "double-click, own window" experience)*
+- **.NET with a Blazor Hybrid UI** (owner).
+  - The screens are Razor components (HTML/CSS), so the approved mockups carry over.
+  - They run in a WinForms window through `BlazorWebView` (WebView2, built into Windows 11) and call the save-editing code directly. There is no local web server, no auth token and no npm build.
+- **A single self-contained `.exe`.** It needs no .NET on the user's machine. *(my call on WinForms as the window host; the owner approved the "double-click, own window" experience)*
 - **Game data is read from the install at runtime.**
   - Icons, the item catalog and skill data come from `data.win` and `StoneShard.exe`.
   - Nothing from the game ships in the editor or the repo.
@@ -363,8 +365,8 @@ Every item below is verified **in the real game**: edit the save, load it in Sto
 
 ## 12. Left to the builder
 
-- Project and solution layout, libraries, and the choice of WebView2 host.
-- API shape between the .NET host and React, state management, and component design.
+- Project and solution layout and libraries.
+- How components get state and edits (a service the components call), and component design.
 - Styling details beyond the mockups, keeping the dark, game-like look.
 - Cache format.
 - Test strategy.

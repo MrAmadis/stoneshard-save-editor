@@ -4,9 +4,9 @@
 
 **Goal:** A double-click Windows `.exe` that opens the owner's Stoneshard saves in a game-styled window and edits inventory, gold, stats, skills and reputation, writing saves the game accepts.
 
-**Architecture:** All save logic lives in a tested .NET library (`Core`). Game-file readers (`GameData`) extract icons, item tables and names from the owner's install at runtime. An ASP.NET Core minimal API (`Api`) holds the one open save session in memory and applies edit operations. A WinForms window (`App`) hosts that API on `127.0.0.1` and shows the React UI (`web/`) inside WebView2. The frontend is a thin view: every edit is a POST that returns the new session state.
+**Architecture:** All save logic lives in a tested .NET library (`Core`). Game-file readers (`GameData`) extract icons, item tables and names from the owner's install at runtime. A Razor class library (`UI`) holds the screens and an in-process `EditorService`; a WinForms window (`App`) shows them through Blazor Hybrid (`BlazorWebView`). There is no web server and no JavaScript build.
 
-**Tech Stack:** .NET 10 (C#), ASP.NET Core minimal API, WinForms + Microsoft.Web.WebView2, SharpZipLib (BZip2), xunit.v3; React 18 + TypeScript 5 + Vite 5, Vitest + Testing Library.
+**Tech Stack:** .NET 10 (C#), Blazor Hybrid (Razor components in WinForms `BlazorWebView`, WebView2), SharpZipLib (BZip2), xunit.v3, bUnit.
 
 **Spec:** `docs/superpowers/specs/2026-10-22-stoneshard-save-editor-design.md`. Read it first. Section numbers below (§) refer to it.
 
@@ -14,8 +14,7 @@
 
 - **Platform:** Windows 11 x64.
 - **Target frameworks:** `net10.0` for libraries and tests, `net10.0-windows` for `App`. Nullable enabled, `TreatWarningsAsErrors` true. SDK pinned by `global.json` to `10.0.401` with `rollForward: latestFeature`.
-- **NuGet packages allowed:** `SharpZipLib`, `Microsoft.Web.WebView2`, `Microsoft.Extensions.FileProviders.Embedded`, `Microsoft.AspNetCore.TestHost`, `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`.
-- **npm packages allowed:** `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`.
+- **NuGet packages allowed:** `SharpZipLib`, `Microsoft.AspNetCore.Components.WebView.WindowsForms`, `bunit`, `xunit.v3`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`.
 - Any other dependency needs a one-line reason in its commit message.
 - **Never write to the owner's real characters** (`%LOCALAPPDATA%\StoneShard\characters_v1\character_1` and `character_2`) from tests, the Lab tool or dev runs. Tests use temp copies only (`Fixtures.CopyRealSavesToTemp()`). Writes into the live saves folder go only to test characters made by the Lab tool (§10). The one exception is `characters.map`, which the Lab tool's `point-continue` command may rewrite after backing it up.
 - **Game files are read-only.** Never modify `data.win` or `StoneShard.exe`. Never commit anything extracted from them (PNGs, table dumps). The only exceptions are the two hand-made data files `tree-unlocks.json` and `skill-trees.json`, which hold skill object names and positions only.
@@ -51,11 +50,11 @@
 
 Failure modes the spec implies but no feature test exercises directly, most likely first. Each has a test added in the task that owns the code.
 
-1. **The slot changed on disk after it was opened** (the game autosaved or exited meanwhile). Save refuses with "changedOnDisk" and offers a reload; it never overwrites. Tests: Task 4 `Save_refused_when_file_changed_on_disk`, Task 14 `Save_returns_changedOnDisk`.
-2. **Stoneshard is running.** Save is blocked and the UI says why. Tests: Task 4 `Save_refused_while_game_running`, Task 14 `Save_returns_gameRunning`, Task 15 `editor shows game-running banner and disables save`.
+1. **The slot changed on disk after it was opened** (the game autosaved or exited meanwhile). Save refuses with "changedOnDisk" and offers a reload; it never overwrites. Tests: Task 4 `Save_refused_when_file_changed_on_disk`, Task 14 `Save_reports_changedOnDisk`.
+2. **Stoneshard is running.** Save is blocked and the UI says why. Tests: Task 4 `Save_refused_while_game_running`, Task 14 `Save_reports_gameRunning`, Task 15 `Editor_shows_game_running_banner_and_disables_save`.
 3. **Damaged or unsupported slot** (bad zlib, hash mismatch, `wipeVersion` ≠ 0.9). The picker still lists it with a warning, it opens read-only, and it is never written. Tests: Task 3 `Damaged_slot_is_reported_not_thrown`, `Hash_mismatch_is_damaged`, `Unsupported_version_is_flagged`; Task 4 `ReadOnly_session_never_writes`.
-4. **Bag full on Add or Duplicate.** A clear error ("No room in the bag"), and the save is unchanged. Tests: Task 9 `Bag_full_rejects_duplicate_and_add`, Task 14 `Edit_rejects_with_422_and_message`.
-5. **Invalid numbers** (empty, letters, negative, fractional for whole-number fields, NaN/∞, out of range). Rejected with a message, nothing changed. Tests: Task 8 `Set_rejects_invalid`, Task 9 `Inventory_rejects_invalid_numbers`, Task 15 `NumberField rejects non-numeric input`.
+4. **Bag full on Add or Duplicate.** A clear error ("No room in the bag"), and the save is unchanged. Tests: Task 9 `Bag_full_rejects_duplicate_and_add`, Task 14 `Edit_rejections_carry_the_message`.
+5. **Invalid numbers** (empty, letters, negative, fractional for whole-number fields, NaN/∞, out of range). Rejected with a message, nothing changed. Tests: Task 8 `Set_rejects_invalid`, Task 9 `Inventory_rejects_invalid_numbers`, Task 15 `NumberField_rejects_non_numeric_input`.
 
 ---
 
@@ -79,24 +78,21 @@ stoneshard-save-editor/
       Tables/    ExeTables.cs  GameTable.cs  Localization.cs
       Catalog/   ItemCatalog.cs  ItemPropsBuilder.cs  GameItemShapes.cs
       Skills/    SkillCatalog.cs  tree-unlocks.json  skill-trees.json   (both embedded resources)
-    StoneshardSaveEditor.Api/         minimal API host (testable, no UI)
-      ApiHost.cs  ApiOptions.cs  Dtos.cs  EditorState.cs  GameDataProvider.cs  Settings.cs
-      Endpoints/ SavesEndpoints.cs  SessionEndpoints.cs  AssetEndpoints.cs  SetupEndpoints.cs
-    StoneshardSaveEditor.App/         WinForms + WebView2 shell, embeds web/dist
-      Program.cs  MainForm.cs
+    StoneshardSaveEditor.UI/          Razor class library: screens + EditorService (in-process)
+      Services/  EditorService.cs  GameDataProvider.cs  Settings.cs  Views.cs  Names.cs  IAssetUrls.cs
+      App.razor  Screens/ SavePicker.razor  Editor.razor
+      Tabs/      CharacterTab.razor  InventoryTab.razor  SkillsTab.razor  ReputationTab.razor
+      Components/ NumberField.razor  Icon.razor  Banner.razor  BackupsDialog.razor  CatalogDialog.razor
+      wwwroot/app.css
+    StoneshardSaveEditor.App/         WinForms window hosting the UI in BlazorWebView
+      Program.cs  MainForm.cs  WebViewAssets.cs  wwwroot/index.html
   tools/StoneshardSaveEditor.Lab/      console tool for test characters and experiments
       Program.cs  Experiments.cs
-  web/                                 React UI
-    src/ main.tsx  App.tsx  theme.css
-         api/ client.ts  types.ts
-         screens/ SavePicker.tsx  Editor.tsx
-         tabs/ CharacterTab.tsx  InventoryTab.tsx  SkillsTab.tsx  ReputationTab.tsx
-         components/ NumberField.tsx  Icon.tsx  Banner.tsx  BackupsDialog.tsx  CatalogDialog.tsx
-         test/ fixtures.ts  *.test.tsx
   tests/
     StoneshardSaveEditor.Core.Tests/      (TestSupport/Fixtures.cs shared by link)
     StoneshardSaveEditor.GameData.Tests/
-    StoneshardSaveEditor.Api.Tests/
+    StoneshardSaveEditor.Lab.Tests/
+    StoneshardSaveEditor.UI.Tests/       (bUnit)
     fixtures/real/characters_v1/          git-ignored snapshot (already present)
   docs/research/in-game-findings.md       results of the owner's in-game checks
 ```
@@ -877,256 +873,291 @@ public void Skills_land_in_their_tree(string obj, string tree) { }
 
 ---
 
-## Phase 5: App
+## Phase 5: App (Blazor Hybrid)
 
-### Task 14: API host
+The owner switched the UI from React to Blazor Hybrid on 2026-10-22 (spec §5, §9).
+
+- The screens are Razor components in a Razor class library (`UI`). They call an in-process `EditorService` that wraps the Core editors and the game data.
+- A WinForms window (`App`) hosts them in `BlazorWebView`.
+- There is no HTTP API, no token and no npm.
+- **Icons and save screenshots** are plain files served to the WebView through virtual host names:
+  - `https://icons.sse/…` maps to the icon cache root;
+  - `https://saves.sse/…` maps to the saves root.
+  - Components get URLs from `IAssetUrls`, so tests don't need a WebView.
+
+### Task 14: Editor service
 
 **Files:**
 - Create:
-  - `src/StoneshardSaveEditor.Api/StoneshardSaveEditor.Api.csproj` (`FrameworkReference Microsoft.AspNetCore.App`)
-  - `ApiHost.cs`, `ApiOptions.cs`, `Dtos.cs`, `EditorState.cs`, `GameDataProvider.cs`, `Settings.cs`
-  - `Endpoints/*.cs`
-- Test: `tests/StoneshardSaveEditor.Api.Tests/ApiTests.cs` (uses `Microsoft.AspNetCore.TestHost`)
+  - `src/StoneshardSaveEditor.UI/StoneshardSaveEditor.UI.csproj` (`Microsoft.NET.Sdk.Razor`, `net10.0`; references Core and GameData)
+  - `src/StoneshardSaveEditor.UI/Services/EditorService.cs`, `GameDataProvider.cs`, `Settings.cs`, `Views.cs`, `Names.cs`
+- Modify: `src/StoneshardSaveEditor.Core/Editing/SkillsEditor.cs` (add `UnlockTree`)
+- Test: `tests/StoneshardSaveEditor.UI.Tests/EditorServiceTests.cs`, `tests/StoneshardSaveEditor.Core.Tests/Editing/SkillsEditorTests.cs`
 
 **Interfaces:**
 - Consumes: all Core and GameData types.
-- Produces:
-  - `sealed record ApiOptions(string SavesRoot, string BackupRoot, string CacheRoot, string SettingsPath, string Token, IGameProcessProbe Probe, IFileProvider? StaticFiles, Func<string?>? PickFolder)`. `PickFolder` shows a native folder dialog; `App` supplies it, tests pass null.
-  - `static class ApiHost`: `WebApplication Build(ApiOptions o, Action<WebApplicationBuilder>? configure = null)`
-  - Every `/api/*` request needs the header `X-Editor-Token: <Token>`, else 401. `/icons/*` and `/previews/*` are open (read-only).
-  - `GameDataProvider` loads the game data lazily once: `GameInstall.Find(settings.GameDir)`, then `DataWinFile`, `ExeTables`, `Localization`, icons and catalogs.
-    - When the game isn't found, or any loader throws (e.g. a game update changed the format, §10.8), it reports `gameFound: false` plus `gameError` and never crashes.
-    - Catalog, icon and skill-name features are then unavailable; the other tabs still work.
-  - Settings JSON: `{ "gameDir": string|null }`.
+- Produces (namespace `StoneshardSaveEditor.UI.Services`):
+  - `SkillsEditor.UnlockTree(IEnumerable<string> firstTier, string treatiseBook)` (Core): clears `locked` and appends the book to `characterDataMap.Books_Read` if missing, as reading it does (in-game finding).
+  - `sealed record EditorOptions(string SavesRoot, string BackupRoot, string CacheRoot, string SettingsPath, IGameProcessProbe Probe, Func<string?>? PickFolder)`
+  - `sealed class Settings { string? GameDir; static Settings Load(string path); void Save(string path); }`: JSON, camelCase.
+  - `sealed record GameFiles(string GameDir, ObjectTable Objects, ExeTables Tables, Localization Localization, IconService Icons, GameItemShapes Shapes, ItemCatalog Catalog)`
+  - `sealed class GameDataProvider(Func<string?> configuredDir, string cacheRoot)`: `GameFiles? Files`, `string? Error`, `string? GameDir`, `void Reset()`.
+    - It loads lazily, once per game folder and process.
+    - Any exception becomes `Error`; it never throws.
+  - **View records:**
+    - `SetupView(string SavesRoot, bool SavesFound, string? GameDir, bool GameFound, string? GameError)`
+    - `SlotView(string Folder, string DisplayName, DateTime SavedAtLocal, string Location, SlotStatus Status, string? StatusMessage)`
+    - `CharacterView(string Folder, string Name, string? ClassName, int? Level, string AvatarSprite, IReadOnlyList<SlotView> Slots)`
+    - `SkillView(string Object, string DisplayName, string Sprite, bool Passive, bool Learned, bool Locked, int? Col, int? Row)`
+    - `SkillTreeView(string Id, string DisplayName, string? TreatisePrefix, bool Open, int LearnedCount, bool CanUnlock, IReadOnlyList<SkillView> Skills)`
+    - `ReputationView(string Name, string LocationKey, double Value)`
+    - `SessionView(string CharacterFolder, string SlotFolder, string Name, string Location, bool ReadOnly, string? ReadOnlyReason, int ChangeCount, bool GameFound, IReadOnlyDictionary<CharacterField, double> Character, int Gold, IReadOnlyList<ItemView> Items, int BagRows, IReadOnlyList<SkillTreeView> Trees, bool RulesAvailable, IReadOnlyList<ReputationView> Reputation)`
+  - `static class Names`:
+    - `SlotDisplayName(string folder)`: `exitsave_1` → "Exit save", `save_N` → "Save N", `autosave_N` → "Autosave N".
+    - `Pretty(string key, Localization? loc)`: `loc.English(key)`, or else the key split into words ("CaravanCamp" → "Caravan Camp", "RottenWillow" → "Rotten Willow", "Brynn_NW" → "Brynn NW").
+  - `sealed class EditorService(EditorOptions options, GameDataProvider game)`:
+    - `event Action? Changed`
+    - **Setup:**
+      - `SetupView Setup()`
+      - `void SetGameDir(string path)`: `EditRejectedException` if not a game folder; saves settings and resets the provider.
+      - `string? BrowseForGameDir()`
+    - **Saves:** `IReadOnlyList<CharacterView> Characters()`
+    - **Session:**
+      - `bool IsOpen`, `SessionView Current`
+      - `SessionView Open(string character, string slot)`, `SessionView Reload()`
+      - `SaveResult Save()`
+      - `IReadOnlyList<BackupInfo> Backups()`
+      - `SessionView Restore(string backupPath)`: only listed backups.
+      - `bool GameRunning()`
+    - **Edits** (each returns `SessionView` and raises `Changed`; a read-only session rejects them with "This save is read-only: <reason>"):
+      - `SetCharacter(CharacterField f, double v)`, `SetReputation(string locationKey, double v)`
+      - `SetCharges(int i, int v)`, `SetStack(int i, int v)`, `SetDurability(int i, double current, double max)`
+      - `DeleteItem(int i)`, `DuplicateItem(int i)`, `AddItem(string key)`, `SetGold(int v)`
+      - `LearnSkill(string obj, bool rules)`, `UnlearnSkill(string obj, bool rules)`
+      - `RespecAll()`, `RefundTree(string treeId)`, `UnlockTree(string treeId)`
+    - `IReadOnlyList<CatalogItem> Catalog()`
+  - **Rules:**
+    - Placing items (`DuplicateItem`, `AddItem`, `SetGold` when it must create a purse) and `Catalog()` need the game files. Without them they throw `EditRejectedException("Game files are needed for this")`.
+    - With `rules: true`: learning needs the skill to be available (`!Locked`) and costs a point; unlearning refunds one. Task 13 adds prerequisites.
+    - With `rules: false`: pure toggles.
+    - `RulesAvailable` = every treatise tree has a layout in `skill-trees.json` (false until Task 13).
+    - `UnlockTree`: `UnlockSet(treeId)` plus book `treatise_<prefix>1`. It throws `EditRejectedException` when there is no data for that tree yet.
 
-**Endpoints:**
-
-| Method + path | Body | Returns |
-|---|---|---|
-| GET `/api/setup` | — | `{ savesRoot, savesFound, gameDir, gameFound, gameError }` |
-| POST `/api/setup/game-dir` | `{ path }` | setup (400 if not a game dir) |
-| POST `/api/setup/browse` | — | `{ path }` from `PickFolder` (501 when null, `{ path: null }` if cancelled) |
-| GET `/api/saves` | — | `CharacterDto[]` |
-| GET `/api/status` | — | `{ gameRunning }` |
-| POST `/api/session/open` | `{ character, slot }` | `SessionDto` |
-| GET `/api/session` | — | `SessionDto` (404 if none) |
-| POST `/api/session/edit` | `EditRequest` | `SessionDto`, or 422 `{ error }` |
-| POST `/api/session/reload` | — | `SessionDto` (Undo all) |
-| POST `/api/session/save` | — | `{ result: "saved"/"gameRunning"/"changedOnDisk"/"readOnly", backupPath? }` |
-| GET `/api/session/backups` | — | `[{ path, createdAt }]` |
-| POST `/api/session/backups/restore` | `{ path }` | `SessionDto` |
-| GET `/api/catalog/items` | — | `CatalogItem[]` |
-| GET `/icons/{sprite}.png` | — | image/png (404 unknown) |
-| GET `/previews/{character}/{slot}` | — | `preview.png` |
-
-**DTOs** (camelCase JSON):
-- `CharacterDto(folder, name, classKey, level, avatarSprite, SlotDto[] slots)`
-- `SlotDto(folder, displayName, savedAt, location, status, statusMessage)`
-  - `displayName`: `exitsave_1` → "Exit save", `save_N` → "Save N", `autosave_N` → "Autosave N".
-  - `location`: `Localization.English(key)`, falling back to splitting the camel-case key ("CaravanCamp" → "Caravan Camp").
-- `SessionDto(characterFolder, slotFolder, name, location, readOnly, readOnlyReason, changeCount, gameFound, character: Record<CharacterField,double>, gold, items: ItemView[], bagRows, statPoints, abilityPoints, trees: SkillTreeDto[], rulesAvailable, reputation: ReputationDto[])`
-  - `SkillTreeDto(id, displayName, open, learnedCount, canUnlock, skills: [{object, displayName, sprite, passive, learned, locked, col?, row?}])`
-  - `open` = any skill unlocked or learned. `canUnlock` = `!open && UnlockSet` non-empty.
-  - `rulesAvailable` = `skill-trees.json` covers all trees.
-  - `ReputationDto(name, locationKey, value)`
-- `EditRequest(string Op, string? Field, double? Value, int? Index, double? Current, double? Max, string? Key, string? Skill, string? TreeId, string? LocationKey, bool Rules = true)`
-
-**Edit ops:** `setCharacter`, `setReputation`, `setCharges`, `setStack`, `setDurability`, `deleteItem`, `duplicateItem`, `addItem` (Key), `setGold`, `learnSkill`, `unlearnSkill`, `respecAll`, `refundTree`, `unlockTree`.
-
-- [ ] **Step 1: Write failing tests** (TestServer, temp copy, `FakeProbe`, token "t")
+- [ ] **Step 1: Write failing tests**
 
 ```csharp
-[Fact] public async Task Api_requires_token() { /* GET /api/saves without header → 401 */ }
-[Fact] public async Task Saves_lists_characters() { /* 2; Velmir has 6 slots; first slot displayName "Exit save", location "Caravan Camp" */ }
-[Fact] public async Task Open_edit_save_round_trip() { /* open character_2/exitsave_1; setCharacter Strength 18 → changeCount 1; save → "saved"; open again → 18 */ }
-[Fact] public async Task Edit_rejects_with_422_and_message() { /* setCharacter Sanity 150 → 422, error contains "Sanity" */ }
-[Fact] public async Task Save_returns_gameRunning() { }
-[Fact] public async Task Save_returns_changedOnDisk() { /* rewrite data.sav after open → "changedOnDisk" */ }
-[Fact] public async Task Icons_served_as_png() { /* skip without game: /icons/s_inv_salve.png → 200 image/png */ }
-[Fact] public async Task Preview_served() { /* /previews/character_2/exitsave_1 → 200 image/png */ }
-[Fact] public async Task Setup_reports_missing_saves_root() { /* SavesRoot nonexistent → savesFound false; /api/saves → [] */ }
-[Fact] public async Task Unparseable_game_files_degrade_gracefully() { /* settings gameDir = temp dir with junk data.win + StoneShard.exe → gameFound false, gameError set; open + setCharacter still work */ }
+// Core: SkillsEditorTests
+[Fact] public void UnlockTree_unlocks_first_tier_and_records_the_book_like_reading_it() { /* flags 0.0; Books_Read ends with "treatise_pyro1"; once only; 1 change */ }
+// UI: EditorServiceTests (temp copy of real saves, FakeProbe, temp settings/backups/cache)
+[Fact] public void Characters_list_velmir_with_named_slots() { /* 2 characters; Velmir: Revenger, level 5, s_Velmir, 6 slots; first "Exit save", "Caravan Camp", Ok; contains "Autosave 3", "Save 2" */ }
+[Fact] public void Open_edit_save_round_trip() { /* Strength 13 → 18, ChangeCount 1, Save → Saved, reopen → 18 & ChangeCount 0; Gold 2864; BagRows 5; 33 items; 5 reputation rows */ }
+[Fact] public void Reload_discards_unsaved_edits() { }
+[Fact] public void Edit_rejections_carry_the_message() { /* Sanity 150 → EditRejectedException containing "Sanity"; SetCharges(999, 2) rejected */ }
+[Fact] public void Using_the_session_before_opening_fails() { /* Current → InvalidOperationException */ }
+[Fact] public void Save_reports_gameRunning() { }
+[Fact] public void Save_reports_changedOnDisk() { }
+[Fact] public void Backups_are_listed_and_restorable() { /* restore → Strength 13; unlisted path → EditRejectedException */ }
+[Fact] public void Game_data_powers_trees_catalog_and_unlock() { /* skip without game: 22 trees; Greataxes open, 3 learned; Pyromancy closed + CanUnlock; "Hooking Chop";
+     Location "Caravan Camp"; reputation contains "Rotten Willow"; Catalog > 1000; AddItem treatise; UnlockTree pyromancy → open and Books_Read on disk after Save; RespecAll → 6 points */ }
+[Fact] public void Missing_saves_root_is_reported() { /* SavesFound false; Characters empty; BrowseForGameDir without PickFolder → null */ }
+[Fact] public void Unparseable_game_files_degrade_gracefully() { /* junk data.win + exe → GameFound false, GameError set; Open + SetCharacter work; Trees empty; Catalog → EditRejectedException */ }
+[Fact] public void Game_dir_is_validated_and_saved() { /* empty folder → EditRejectedException; real game dir → settings.json written */ }
+[Fact] public void Names_are_pretty() { /* SlotDisplayName cases; Pretty("RottenWillow", null) == "Rotten Willow"; Pretty("Brynn_NW", null) == "Brynn NW" */ }
+```
+
+- [ ] **Step 2: Run** `dotnet test --project tests/StoneshardSaveEditor.UI.Tests`. Expected: FAIL (compile).
+
+- [ ] **Step 3: Implement.**
+  - `GameDataProvider` keeps a static `ConcurrentDictionary<gameDir|cacheRoot, Lazy<GameFiles>>` and drops entries that failed.
+  - Without game files, item views use 1×1 footprints and the sprite `"missing"`.
+  - `SkillCatalog` is built once per opened session.
+
+- [ ] **Step 4: Run.** Expected: PASS.
+
+- [ ] **Step 5: Commit** `feat(ui): editor service over the save editors`.
+
+### Task 15: Desktop window, save picker and editor frame
+
+**Files:**
+- Create:
+  - `src/StoneshardSaveEditor.UI/_Imports.razor`, `App.razor`
+  - `Screens/SavePicker.razor`, `Screens/Editor.razor`
+  - `Components/NumberField.razor`, `Components/Icon.razor`, `Components/Banner.razor`, `Components/BackupsDialog.razor`
+  - `Services/IAssetUrls.cs`, `wwwroot/app.css`
+  - `src/StoneshardSaveEditor.App/StoneshardSaveEditor.App.csproj` (`Microsoft.NET.Sdk.Razor`, `net10.0-windows`, `WinExe`, `UseWindowsForms`, package `Microsoft.AspNetCore.Components.WebView.WindowsForms`)
+  - `Program.cs`, `MainForm.cs`, `WebViewAssets.cs`, `wwwroot/index.html`
+- Test: `tests/StoneshardSaveEditor.UI.Tests/ShellTests.cs` (bUnit)
+
+**Interfaces:**
+- Consumes: `EditorService` and views (Task 14).
+- Produces:
+  - `interface IAssetUrls { string Icon(string sprite); string Preview(string character, string slot); }`
+    - The App implementation ensures the icon PNG is in the cache (`IconService.GetPng`) and returns `https://icons.sse/<path under cache root>`.
+    - Previews return `https://saves.sse/<character>/<slot>/preview.png`.
+  - `<NumberField Value Whole Min Max OnCommit>`: commits on Enter or blur; non-numbers, decimals in whole fields, and out-of-range values show an inline error and don't commit.
+  - `<Icon Sprite Scale=2>`: `<img>` at 2× with `image-rendering: pixelated`.
+  - `App.razor` shows `SavePicker` until a slot is opened, then `Editor`.
+  - `Editor` header has the portrait, name, slot and location; tabs Character · Inventory · Skills · Reputation (bodies placeholders until Tasks 17–19); the unsaved-changes count; "Undo all", "Backups", "Save to game".
+  - Every 3 s it polls `GameRunning()`. When the game runs it shows the banner "Stoneshard is running. Close the game before saving." and disables "Save to game".
+  - Save results:
+    - `ChangedOnDisk` → "The game changed this save after you opened it." plus a "Reload" button;
+    - `ReadOnly` → the read-only reason.
+- **Window:** title "Stoneshard Save Editor", 1280×820, minimum 1100×720, background `#1b1815`.
+- **WebView2:**
+  - user-data folder `%LOCALAPPDATA%\StoneShardSaveEditor\webview2`;
+  - virtual hosts `icons.sse` → cache root and `saves.sse` → saves root (`SetVirtualHostNameToFolderMapping`, allow);
+  - missing runtime → message box with `https://go.microsoft.com/fwlink/p/?LinkId=2124703`, then exit.
+- **PickFolder:** `FolderBrowserDialog` on the UI thread.
+
+- [ ] **Step 1: Write failing bUnit tests**
+
+```csharp
+[Fact] public void SavePicker_shows_characters_and_slots() { /* "Velmir", "Revenger · Level 5", "Exit save", "Caravan Camp"; damaged slot shows its warning */ }
+[Fact] public void Picking_a_slot_opens_the_editor() { }
+[Fact] public void Editor_shows_unsaved_change_count() { /* after an edit → "1 unsaved change" */ }
+[Fact] public void Editor_shows_game_running_banner_and_disables_save() { }
+[Fact] public void ChangedOnDisk_offers_reload() { }
+[Fact] public void NumberField_rejects_non_numeric_input() { /* "abc" → error, OnCommit not called; "12.5" with Whole → error */ }
+[Fact] public void Setup_problems_are_explained() { /* no saves → "No Stoneshard saves found at <path>"; game missing → "Game files not found" + "Choose game folder…" */ }
 ```
 
 - [ ] **Step 2: Run.** Expected: FAIL.
 
-- [ ] **Step 3: Implement.** `EditorState` holds the single `SaveSession` plus the editors and maps ops to editor calls. `EditRejectedException` → 422. A read-only session rejects every edit with 422 "This save is read-only: <reason>".
+- [ ] **Step 3: Implement** to the approved mockup `docs/superpowers/specs/mockups/app-shell.html`, with the tokens in Global Constraints.
 
 - [ ] **Step 4: Run.** Expected: PASS.
 
-- [ ] **Step 5: Commit** `feat(api): local API for saves, sessions, edits, icons`.
+- [ ] **Step 5: Launch** with `dotnet run --project src/StoneshardSaveEditor.App`. Expected: a window titled "Stoneshard Save Editor" lists Velmir and Jorgrim with portraits and screenshots. Opening a slot shows the editor frame.
 
-### Task 15: Web app: theme, API client, save picker, editor frame
+- [ ] **Step 6: Commit** `feat(app): desktop window with save picker and editor frame`.
 
-**Files:**
-- Create:
-  - `web/package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`
-  - `src/main.tsx`, `App.tsx`, `theme.css`
-  - `src/api/client.ts`, `src/api/types.ts`
-  - `src/screens/SavePicker.tsx`, `Editor.tsx`
-  - `src/components/NumberField.tsx`, `Icon.tsx`, `Banner.tsx`, `BackupsDialog.tsx`
-  - `src/test/fixtures.ts`, `src/test/*.test.tsx`
-
-**Interfaces:**
-- Consumes: the Task 14 endpoints and DTOs; `types.ts` mirrors them.
-- Produces:
-  - `api/client.ts`:
-    - `getSetup()`, `getSaves()`, `getStatus()`, `openSession(c, s)`, `edit(req)`, `reload()`, `save()`, `getBackups()`, `restore(path)`, `getCatalog()`.
-    - Each throws `ApiError(message)` on 4xx.
-    - The token comes from `location.hash` `#token=…`; in Vite dev mode it is `"dev"`.
-  - `<NumberField value whole min max onCommit />`: commits on Enter or blur; shows an inline error and doesn't call `onCommit` for invalid input.
-  - `<Icon sprite scale=2 />`: an `<img src="/icons/{sprite}.png">` with pixelated rendering.
-  - `Editor` renders the header plus tabs: Character, Inventory, Skills, Reputation. Tab bodies are placeholders until Tasks 17–19.
-  - `vite.config.ts` proxies `/api`, `/icons`, `/previews` → `http://127.0.0.1:5199`.
-
-- [ ] **Step 1: Write failing tests** (Vitest + Testing Library, client mocked with fixtures built from Velmir's DTO shapes)
-
-```tsx
-test('save picker shows characters and slots', ...)          // "Velmir", "Revenger · Level 5", "Exit save", "Caravan Camp"; damaged slot shows warning text
-test('editor shows unsaved change count', ...)                // changeCount 3 → "3 unsaved changes"
-test('editor shows game-running banner and disables save', ...) // status.gameRunning → banner "Stoneshard is running. Close the game before saving." and "Save to game" disabled
-test('changedOnDisk save result offers reload', ...)          // save() → changedOnDisk → message + "Reload" button calls reload()
-test('NumberField rejects non-numeric input', ...)             // type "abc" → error shown, onCommit not called; "12.5" with whole → error
-test('setup problems are explained', ...)                      // savesFound false → "No Stoneshard saves found at <path>";
-                                                               // gameFound false → banner "Game files not found" + "Choose game folder…" calls browse then game-dir
-```
-
-- [ ] **Step 2: Run** `npm test` in `web/`. Expected: FAIL.
-
-- [ ] **Step 3: Implement** to the approved mockup `docs/superpowers/specs/mockups/app-shell.html`, with the tokens in Global Constraints.
-  - Poll `/api/status` every 3000 ms.
-  - Show read-only and game-not-found banners.
-  - The Backups dialog lists backups newest first, each with "Restore".
-
-- [ ] **Step 4: Run.** Expected: PASS. `npm run build` → `web/dist/index.html` exists.
-
-- [ ] **Step 5: Commit** `feat(web): save picker and editor frame`.
-
-### Task 16: Desktop window and single-file packaging
+### Task 16: Single-file packaging
 
 **Files:**
-- Create: `src/StoneshardSaveEditor.App/StoneshardSaveEditor.App.csproj`, `Program.cs`, `MainForm.cs`
-- Modify: `StoneshardSaveEditor.sln`
+- Modify: `src/StoneshardSaveEditor.App/StoneshardSaveEditor.App.csproj`
 
 **Interfaces:**
-- Consumes: `ApiHost.Build`, `ApiOptions` (Task 14); `web/dist` (Task 15).
-- Produces: `artifacts/StoneshardSaveEditor.exe`.
-- **csproj:**
-  - `OutputType WinExe`, `net10.0-windows`, `UseWindowsForms`, `FrameworkReference Microsoft.AspNetCore.App`.
-  - Packages `Microsoft.Web.WebView2` and `Microsoft.Extensions.FileProviders.Embedded`; `GenerateEmbeddedFilesManifest true`.
-  - `web/dist/**` as `EmbeddedResource` under `wwwroot/`.
-  - A target `BuildWeb` runs `npm ci` and `npm run build` in `web/` before `Build` when `Configuration == Release`.
-- **Program:**
-  - Normal start: `[STAThread]`; start ApiHost on `127.0.0.1:0` with a random 32-byte hex token.
-  - The window shows `http://127.0.0.1:{port}/#token={token}`.
-  - WebView2 user-data folder: `%LOCALAPPDATA%\StoneShardSaveEditor\webview2`.
-  - Window: title "Stoneshard Save Editor", 1280×820, minimum 1100×720, background `#1b1815`.
-  - Without the WebView2 runtime: a message box with `https://go.microsoft.com/fwlink/p/?LinkId=2124703`, then exit.
-  - `PickFolder` runs a `FolderBrowserDialog` on the UI thread (via `Invoke`) and returns the chosen path or null.
-  - `--dev`: no window; port 5199; token "dev"; no static files.
+- Produces `artifacts/StoneshardSaveEditor.exe`.
+- Static web assets (index.html, app.css, `_content/...`) must work from a single file. Either:
+  - `IncludeAllContentForSelfExtract=true`, or
+  - embed them and serve from an embedded file provider.
+  
+  The builder's choice. Verify by running the exe from an empty folder.
 
-- [ ] **Step 1: Implement the project and `Program`/`MainForm`.**
-
-- [ ] **Step 2: Verify dev mode.** Run `dotnet run --project src/StoneshardSaveEditor.App -- --dev` and `npm run dev` in `web/`. Expected: the picker lists Velmir and Jorgrim at `http://localhost:5173`.
-
-- [ ] **Step 3: Publish.**
+- [ ] **Step 1: Publish.**
 
   ```
   dotnet publish src/StoneshardSaveEditor.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o artifacts
   ```
 
-  Expected: `artifacts/StoneshardSaveEditor.exe`, a single file.
-
-- [ ] **Step 4: Launch the exe.** Expected: a window opens showing the save picker with portraits and screenshots. Copy the exe to a temp folder and launch it there too: it must not depend on the repo.
-
-- [ ] **Step 5: Commit** `feat(app): WebView2 desktop shell and single-file publish`.
+  Expected: `artifacts/StoneshardSaveEditor.exe`.
+- [ ] **Step 2: Test the exe alone.** Copy only that exe to a fresh temp folder and launch it. Expected: the picker shows portraits and screenshots.
+- [ ] **Step 3: Commit** `build: single-file self-contained exe`.
 
 ### Task 17: Character and Reputation tabs
 
 **Files:**
-- Create: `web/src/tabs/CharacterTab.tsx`, `web/src/tabs/ReputationTab.tsx`, tests in `web/src/test/`
-- Modify: `web/src/screens/Editor.tsx`
+- Create: `src/StoneshardSaveEditor.UI/Tabs/CharacterTab.razor`, `Tabs/ReputationTab.razor`; tests in `tests/StoneshardSaveEditor.UI.Tests/CharacterTabTests.cs`
+- Modify: `Screens/Editor.razor`
 
 **Interfaces:**
-- Consumes: `SessionDto.character`, `.gold`, `.reputation`; `edit({op:"setCharacter", field, value})`, `edit({op:"setGold", value})`, `edit({op:"setReputation", locationKey, value})`; `NumberField`.
-- Layout per `app-shell.html`:
+- Consumes: `SessionView.Character`, `.Gold`, `.Reputation`; `EditorService.SetCharacter`, `SetGold`, `SetReputation`; `NumberField`.
+- **Layout** per `app-shell.html`:
   - **Attributes** (− / + steppers);
   - **Progress:** Level, Experience, Stat points, Ability points, Gold;
   - **Condition:** Health, Energy, Sanity, Morale, Hunger, Thirst, Fatigue, Intoxication, Pain;
-  - **Reputation:** rows of name, bar (width = value / max(all values, 5000)) and a NumberField.
-
-- [ ] **Step 1: Write failing tests:** shows Strength 13 and Gold 2864; the + on Strength calls `edit` with value 14; a 422 response shows its error text; Reputation lists Osbrook 4258 first (sorted by value, descending).
-- [ ] **Step 2: Run.** Expected: FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(web): character and reputation tabs`.
-
-### Task 18: Inventory tab
-
-**Files:**
-- Create: `web/src/tabs/InventoryTab.tsx`, `web/src/components/CatalogDialog.tsx`, tests
-- Modify: `web/src/screens/Editor.tsx`
-
-**Interfaces:**
-- Consumes: `SessionDto.items`, `.bagRows`, `.gameFound`; `getCatalog()`; edit ops `setCharges`, `setStack`, `setDurability`, `deleteItem`, `duplicateItem`, `addItem`, `setGold`.
-- Layout per `inventory-layout.html` option A:
-  - **Equipment grid** (3 columns): neck/head/back; weapon/body/set 2; hands/belt/rings; empty/feet/empty. Durability bar = Durability / MaxDurability.
-  - **Bag:** `10 × bagRows` cells of 54 px; each item absolutely positioned at `x*54, y*54`, size `w*54 × h*54`; badge = Stack ?? Charges (when ≥ 1).
-  - **Edit panel** for the selection:
-    - Gold for the moneybag;
-    - Charges when `Charges != null && !isGear`;
-    - Durability current/max when `MaxDurability > 0`;
-    - "Duplicate" and "Delete" buttons.
-  - **"+ Add item"** opens `CatalogDialog`:
-    - a search box (case-insensitive substring of displayName) and category chips;
-    - a grid of icons with names;
-    - Unavailable items greyed out with the reason as a tooltip;
-    - clicking calls `addItem`, then the dialog closes.
-  - Without the game found, the catalog button is disabled with the tooltip "Game files not found".
+  - **Reputation:** rows of name, bar (value / max(all values, 5000)) and a NumberField, sorted by value, descending.
+- **Hints** (from in-game findings):
+  - under Health/Energy: "The game caps these at your maximum";
+  - under Level/Experience: "Changing these can make the game level you up when the save loads".
 
 - [ ] **Step 1: Write failing tests:**
-  - the bag renders the moneybag at left 162 px, top 0, height 108 px;
-  - selecting the moneybag shows a Gold field with 2864;
-  - selecting a salve shows Charges 3;
-  - searching "treatise" filters the catalog;
-  - an unavailable item is disabled;
-  - a 422 "No room in the bag" is shown.
+  - shows Strength 13 and Gold 2864;
+  - the + on Strength makes it 14;
+  - a rejected edit shows its message;
+  - Reputation lists Osbrook 4258 first.
 - [ ] **Step 2: Run.** Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(web): inventory tab with game-style bag and catalog`.
+- [ ] **Step 5: Commit** `feat(ui): character and reputation tabs`.
+
+### Task 18: Inventory tab, catalog, stack counts
+
+**Files:**
+- Create: `src/StoneshardSaveEditor.UI/Tabs/InventoryTab.razor`, `Components/CatalogDialog.razor`; tests `InventoryTabTests.cs`
+- Modify:
+  - `Core/Editing/InventoryEditor.cs` (`Count`)
+  - `GameData/Catalog/GameItemShapes.cs`, `ItemCatalog.cs` (max stack)
+  - `Screens/Editor.razor`
+
+**Interfaces:**
+- Consumes: `SessionView.Items`, `.BagRows`, `.GameFound`; the inventory edits; `Catalog()`.
+- Produces (new scope from the owner, session A):
+  - **Stack counts:** entry value `[6]` is the stack count of stackable items, such as gold coins (`o_inv_gold`, max 100) and ammo (bolts).
+    - `ItemView.Count` (`double?`): set when the item's table `stack` > 0 and `[6]` ≥ 0.
+    - `InventoryEditor.SetCount(int index, int value)`: whole numbers 1 to max stack.
+    - `IItemShapeProvider.MaxStack(string itemName)`: 0 when not stackable.
+    - `EditorService.SetCount`.
+    - New stackable entries from the catalog get `[6]` = max stack.
+    - Gold coins ("Gold" in the catalog) can be added like any item.
+- **Layout** per `inventory-layout.html` option A:
+  - **Equipment grid** (3 columns): neck/head/back; weapon/body/set 2; hands/belt/rings; empty/feet/empty. Durability bars.
+  - **Bag:** `10 × BagRows` cells of 54 px; items absolutely positioned at `x*54, y*54`, size `w*54 × h*54`; badge = Stack ?? Count ?? Charges.
+  - **Edit panel** for the selection:
+    - Gold for the moneybag;
+    - Count for stackables;
+    - Charges for consumables;
+    - Durability current/max when `MaxDurability > 0`;
+    - "Duplicate" and "Delete".
+  - **"+ Add item"** opens `CatalogDialog`:
+    - case-insensitive search on the display name, plus category chips;
+    - unavailable items greyed out with the reason as a tooltip;
+    - clicking adds the item and closes the dialog.
+  - Without game files, "+ Add item" is disabled with the tooltip "Game files not found".
+
+- [ ] **Step 1: Write failing tests:**
+  - Core `SetCount_updates_stack_slot` (Velmir's bolts: 19 → 5, max 20; 21 rejected);
+  - catalog `Gold_coins_are_addable_as_a_full_stack`;
+  - bUnit:
+    - the moneybag renders at left 162 px, top 0, height 108 px;
+    - selecting it shows Gold 2864; a salve shows Charges 3;
+    - searching "treatise" filters the catalog; an unavailable item is disabled;
+    - "No room in the bag" is shown.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run.** Expected: PASS.
+- [ ] **Step 5: Commit** `feat(ui): inventory tab with game-style bag, catalog and stack counts`.
 
 ### Task 19: Skills tab
 
 **Files:**
-- Create: `web/src/tabs/SkillsTab.tsx`, tests
-- Modify: `web/src/screens/Editor.tsx`
+- Create: `src/StoneshardSaveEditor.UI/Tabs/SkillsTab.razor`; tests `SkillsTabTests.cs`
+- Modify: `Screens/Editor.razor`
 
 **Interfaces:**
-- Consumes: `SessionDto.trees`, `.abilityPoints`, `.statPoints`, `.rulesAvailable`; edit ops `learnSkill`, `unlearnSkill`, `respecAll`, `refundTree`, `unlockTree` (each with `rules`), `setCharacter` (StatPoints, AbilityPoints).
-- Layout per `skills-layout.html`:
+- Consumes: `SessionView.Trees`, `.RulesAvailable`, `Character[StatPoints/AbilityPoints]`; `LearnSkill`, `UnlearnSkill`, `RespecAll`, `RefundTree`, `UnlockTree`, `SetCharacter`.
+- **Layout** per `skills-layout.html`:
   - **Top bar:**
     - points fields;
-    - "Respec all", which opens a confirmation ("Unlearn every skill you picked and refund the points?");
+    - "Respec all", which asks to confirm ("Unlearn every skill you picked and refund the points?");
     - "Refund this tree";
-    - the "Follow game rules" toggle, default on. When `rulesAvailable` is false it is disabled and off, with the tooltip "Tree rules not loaded yet".
-  - **Tree list:** each tree with its learned count, and 🔒 when `!open`.
-  - **Tree view:** skills at `col`/`row` (icon 25×24 at 2×); without a layout, two rows (passives, then actives).
-    - States: learned (gold border), available (green border), locked (greyscale, dimmed).
-    - Clicking a learned skill calls `unlearnSkill`; clicking an available skill calls `learnSkill`.
-    - A popover shows the name and the action.
-  - **Closed tree:** "Unlock tree", enabled when `canUnlock`.
+    - the "Follow game rules" toggle. It is disabled and off with the tooltip "Tree rules not loaded yet" until `RulesAvailable`.
+  - **Tree list:** each tree with its learned count, and 🔒 when `!Open`.
+  - **Tree view:** skills at `Col`/`Row`; without a layout, two rows (passives, then actives).
+    - States: learned (gold border), available (green), locked (greyscale).
+    - Clicking a learned skill unlearns it; clicking an available skill learns it.
+  - **Closed tree:** "Unlock tree", enabled when `CanUnlock`.
 
 - [ ] **Step 1: Write failing tests:**
   - Greataxes shows "Hooking Chop" as learned;
-  - clicking it calls `unlearnSkill` with `rules: true`;
-  - "Respec all" asks to confirm, then calls `respecAll`;
-  - a closed tree with `canUnlock` shows "Unlock tree" and calls `unlockTree`;
-  - the rules toggle is disabled when `rulesAvailable` is false.
+  - clicking it unlearns it;
+  - "Respec all" asks to confirm, then refunds;
+  - a closed tree with `CanUnlock` shows "Unlock tree" and opens the tree;
+  - the rules toggle is disabled when `RulesAvailable` is false.
 - [ ] **Step 2: Run.** Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat(web): skills tab`.
+- [ ] **Step 5: Commit** `feat(ui): skills tab`.
 
 ### Task 20: Final acceptance with the owner
 
@@ -1135,7 +1166,6 @@ test('setup problems are explained', ...)                      // savesFound fal
 
 - [ ] **Step 1: Run everything.**
   - `dotnet test` (all projects) → all pass.
-  - `npm test` in `web/` → all pass.
   - Rebuild `artifacts/StoneshardSaveEditor.exe` (Task 16, Step 3).
 
 - [ ] **Step 2: Make a fresh test character.** `clone-test-character --label Osbrook` on the live root, then `point-continue` to it.
