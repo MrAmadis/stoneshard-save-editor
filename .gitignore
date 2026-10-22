@@ -1,1 +1,7 @@
 tests/fixtures/real/
+bin/
+obj/
+node_modules/
+web/dist/
+artifacts/
+.superpowers/

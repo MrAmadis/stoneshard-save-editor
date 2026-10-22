@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StoneshardSaveEditor.Core/StoneshardSaveEditor.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StoneshardSaveEditor.Core.Tests/StoneshardSaveEditor.Core.Tests.csproj" />
+  </Folder>
+</Solution>
