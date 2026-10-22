@@ -89,16 +89,16 @@ public class SkillCatalogTests
     }
 
     [Fact]
-    public void Unlock_set_unions_all_volumes_of_a_tree()
+    public void Unlock_set_is_what_Volume_I_unlocks()
     {
+        // Later volumes unlock the later rows (session B), which the game also opens once their prerequisites are learned.
         var unlocks = new Dictionary<string, string[]>
         {
             ["pyro1"] = ["o_skill_flame_ring_ico", "o_pass_skill_pyromania"],
-            ["pyro2"] = ["o_skill_melting_ray_ico", "o_skill_flame_ring_ico"],
+            ["pyro2"] = ["o_skill_melting_ray_ico"],
             ["geo1"] = ["o_skill_stone_armor_ico"],
         };
-        Assert.Equal(
-            new[] { "o_pass_skill_pyromania", "o_skill_flame_ring_ico", "o_skill_melting_ray_ico" },
-            SkillCatalog.UnionForTreatise(unlocks, "pyro").Order());
+        Assert.Equal(new[] { "o_pass_skill_pyromania", "o_skill_flame_ring_ico" }, SkillCatalog.FirstVolume(unlocks, "pyro").Order());
+        Assert.Empty(SkillCatalog.FirstVolume(unlocks, "electro"));
     }
 }

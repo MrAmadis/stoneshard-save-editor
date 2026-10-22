@@ -46,6 +46,22 @@
     "o_skill_fire_barrage_ico",
     "o_skill_flame_ring_ico"
   ],
+  "pyro2": [
+    "o_pass_skill_feed_the_flames",
+    "o_pass_skill_scorch",
+    "o_skill_flame_wave_ico",
+    "o_skill_magma_rain_ico"
+  ],
+  "pyro3": [
+    "o_pass_skill_safe_distance",
+    "o_skill_incineration_ico",
+    "o_skill_melting_ray_ico"
+  ],
+  "pyro4": [
+    "o_pass_skill_excess_heat",
+    "o_pass_skill_pyromania",
+    "o_skill_inferno_ico"
+  ],
   "staff1": [
     "o_pass_skill_battle_trance",
     "o_pass_skill_destabilizing_hits",

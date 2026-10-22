@@ -20,6 +20,10 @@ public static partial class Names
         };
     }
 
+    /// <summary>Names joined for a sentence: "A", "A and B", "A, B and C".</summary>
+    public static string List(IReadOnlyList<string> names) =>
+        names.Count <= 1 ? string.Concat(names) : $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}";
+
     /// <summary>A label for an item catalog category, which is a table's item type ("2haxe", "Head", "food").</summary>
     public static string Category(string category) => category switch
     {

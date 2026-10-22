@@ -1,1 +1,1649 @@
-{}
+{
+  "sword": {
+    "o_skill_cleave_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_care_blade": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_keeping_distance_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_gloat": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_cleave_ico"
+      ]
+    },
+    "o_skill_fencer_stance_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_care_blade"
+      ]
+    },
+    "o_pass_skill_stamina_training": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_skill_keeping_distance_ico"
+      ]
+    },
+    "o_pass_skill_sharpened_edge": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_gloat",
+        "o_pass_skill_stamina_training",
+        "o_skill_fencer_stance_ico"
+      ]
+    },
+    "o_skill_advance_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_gloat",
+        "o_pass_skill_stamina_training",
+        "o_skill_fencer_stance_ico"
+      ]
+    }
+  },
+  "axe": {
+    "o_skill_crippling_lunge_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_ferocity": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_cut_through_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_show_no_mercy": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_reprisal": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_ferocity",
+        "o_pass_skill_show_no_mercy",
+        "o_skill_crippling_lunge_ico",
+        "o_skill_cut_through_ico"
+      ]
+    },
+    "o_skill_massacre_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_ferocity",
+        "o_pass_skill_show_no_mercy",
+        "o_skill_crippling_lunge_ico",
+        "o_skill_cut_through_ico"
+      ]
+    },
+    "o_skill_execution_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_reprisal"
+      ]
+    },
+    "o_pass_skill_tormenting_swings": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_skill_massacre_ico"
+      ]
+    }
+  },
+  "mace": {
+    "o_skill_onslaught_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_dazing_strikes": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_armor_break_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_moment_of_weakness": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_respite": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_dazing_strikes",
+        "o_skill_onslaught_ico"
+      ]
+    },
+    "o_skill_hammer_and_anvil_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_moment_of_weakness",
+        "o_skill_armor_break_ico"
+      ]
+    },
+    "o_skill_knockout_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_respite"
+      ]
+    },
+    "o_pass_skill_concussion": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_skill_hammer_and_anvil_ico"
+      ]
+    }
+  },
+  "dagger": {
+    "o_pass_skill_quick_change": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_double_jab_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_gaping_wound_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_from_the_shadow": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_deadly_trick_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_from_the_shadow",
+        "o_pass_skill_quick_change",
+        "o_skill_double_jab_ico",
+        "o_skill_gaping_wound_ico"
+      ]
+    },
+    "o_pass_skill_weakening_jabs": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_from_the_shadow",
+        "o_pass_skill_quick_change",
+        "o_skill_double_jab_ico",
+        "o_skill_gaping_wound_ico"
+      ]
+    },
+    "o_skill_painful_stabs_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_from_the_shadow",
+        "o_pass_skill_quick_change",
+        "o_skill_double_jab_ico",
+        "o_skill_gaping_wound_ico"
+      ]
+    },
+    "o_pass_skill_counterattack_mastery": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_skill_deadly_trick_ico"
+      ]
+    },
+    "o_pass_skill_dance_of_death": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_skill_deadly_trick_ico"
+      ]
+    },
+    "o_skill_coup_de_grace_ico": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_weakening_jabs",
+        "o_skill_painful_stabs_ico"
+      ]
+    }
+  },
+  "2hsword": {
+    "o_skill_feint_swing_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_revanche": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_riposte_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_recklessness": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_feint_swing_ico"
+      ]
+    },
+    "o_skill_steel_feast_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_revanche"
+      ]
+    },
+    "o_skill_arc_cleave_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_revanche"
+      ]
+    },
+    "o_pass_skill_fight_to_death": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_riposte_ico"
+      ]
+    },
+    "o_pass_skill_taste_of_victory": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_fight_to_death",
+        "o_pass_skill_recklessness",
+        "o_skill_arc_cleave_ico",
+        "o_skill_steel_feast_ico"
+      ]
+    },
+    "o_skill_heroic_charge_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_fight_to_death",
+        "o_pass_skill_recklessness",
+        "o_skill_arc_cleave_ico",
+        "o_skill_steel_feast_ico"
+      ]
+    },
+    "o_pass_skill_courage": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_fight_to_death",
+        "o_pass_skill_recklessness",
+        "o_skill_arc_cleave_ico",
+        "o_skill_steel_feast_ico"
+      ]
+    }
+  },
+  "2haxe": {
+    "o_skill_wide_cut_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_shieldbreaker": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_dismember_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_rampage_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_shieldbreaker",
+        "o_skill_dismember_ico",
+        "o_skill_wide_cut_ico"
+      ]
+    },
+    "o_pass_skill_fatal_hit": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_shieldbreaker",
+        "o_skill_dismember_ico",
+        "o_skill_wide_cut_ico"
+      ]
+    },
+    "o_pass_skill_finish_him": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_shieldbreaker",
+        "o_skill_dismember_ico",
+        "o_skill_wide_cut_ico"
+      ]
+    },
+    "o_skill_reign_in_blood_ico": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_shieldbreaker",
+        "o_skill_dismember_ico",
+        "o_skill_wide_cut_ico"
+      ]
+    },
+    "o_pass_skill_weapon_of_execution": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_skill_rampage_ico"
+      ]
+    },
+    "o_skill_killing_swing_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_fatal_hit",
+        "o_pass_skill_finish_him"
+      ]
+    },
+    "o_pass_skill_maim_and_kill": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_skill_reign_in_blood_ico"
+      ]
+    }
+  },
+  "2hmace": {
+    "o_pass_skill_blow_after_blow": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_mighty_swing_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_unstoppable_force_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_balance_loss": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_mayhem_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_balance_loss",
+        "o_pass_skill_blow_after_blow",
+        "o_skill_mighty_swing_ico",
+        "o_skill_unstoppable_force_ico"
+      ]
+    },
+    "o_pass_skill_bonebreaker": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_balance_loss",
+        "o_pass_skill_blow_after_blow",
+        "o_skill_mighty_swing_ico",
+        "o_skill_unstoppable_force_ico"
+      ]
+    },
+    "o_skill_forceful_slam_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_balance_loss",
+        "o_pass_skill_blow_after_blow",
+        "o_skill_mighty_swing_ico",
+        "o_skill_unstoppable_force_ico"
+      ]
+    },
+    "o_pass_skill_revel_in_battle": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_skill_mayhem_ico"
+      ]
+    },
+    "o_skill_skull_crusher_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_bonebreaker"
+      ]
+    },
+    "o_pass_skill_heavy_concussion": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_skill_forceful_slam_ico"
+      ]
+    }
+  },
+  "spear": {
+    "o_pass_skill_precise_hits": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_nail_down_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_piercing_lunge_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_no_retreat": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_pikemans_stance_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_precise_hits"
+      ]
+    },
+    "o_pass_skill_wounding_spearhead": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_skill_nail_down_ico",
+        "o_skill_piercing_lunge_ico"
+      ]
+    },
+    "o_skill_intransigence_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_no_retreat"
+      ]
+    },
+    "o_pass_skill_one_at_a_time": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_skill_pikemans_stance_ico"
+      ]
+    },
+    "o_skill_regroup_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_wounding_spearhead",
+        "o_skill_intransigence_ico",
+        "o_skill_pikemans_stance_ico"
+      ]
+    },
+    "o_pass_skill_stay_out": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_skill_intransigence_ico"
+      ]
+    }
+  },
+  "ranged": {
+    "o_skill_taking_aim_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_constant_training": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_thrift": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_distracting_shot_ico": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_weak_spots": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_taking_aim_ico"
+      ]
+    },
+    "o_skill_pierce_through_missile_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_constant_training"
+      ]
+    },
+    "o_skill_suppression_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_thrift"
+      ]
+    },
+    "o_pass_skill_anticipation": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_distracting_shot_ico"
+      ]
+    },
+    "o_skill_long_range_shot_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_anticipation",
+        "o_pass_skill_weak_spots",
+        "o_skill_pierce_through_missile_ico",
+        "o_skill_suppression_ico"
+      ]
+    },
+    "o_pass_skill_precision": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_anticipation",
+        "o_pass_skill_weak_spots",
+        "o_skill_pierce_through_missile_ico",
+        "o_skill_suppression_ico"
+      ]
+    },
+    "o_skill_hunters_mark_ico": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_anticipation",
+        "o_pass_skill_weak_spots",
+        "o_skill_pierce_through_missile_ico",
+        "o_skill_suppression_ico"
+      ]
+    },
+    "o_pass_skill_control_shot": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_skill_long_range_shot_ico"
+      ]
+    },
+    "o_skill_headshot_ico": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_precision"
+      ]
+    },
+    "o_pass_skill_upper_hand": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_skill_hunters_mark_ico"
+      ]
+    }
+  },
+  "shield": {
+    "o_skill_raise_shield_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_ultimate_resilience": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_breakthrough_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_moment_of_retribution": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_last_bastion": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_ultimate_resilience",
+        "o_skill_raise_shield_ico"
+      ]
+    },
+    "o_skill_ram_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_moment_of_retribution",
+        "o_skill_breakthrough_ico"
+      ]
+    },
+    "o_skill_defensive_stance_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_last_bastion"
+      ]
+    },
+    "o_pass_skill_surprise_onrush": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_skill_ram_ico"
+      ]
+    }
+  },
+  "staff": {
+    "o_pass_skill_destabilizing_hits": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_hail_of_blows_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_step_aside_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_battle_trance": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_now_or_never": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_destabilizing_hits",
+        "o_skill_hail_of_blows_ico",
+        "o_skill_step_aside_ico"
+      ]
+    },
+    "o_skill_unwavering_stance_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_skill_hail_of_blows_ico",
+        "o_skill_step_aside_ico"
+      ]
+    },
+    "o_pass_skill_triumph": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_battle_trance",
+        "o_skill_hail_of_blows_ico",
+        "o_skill_step_aside_ico"
+      ]
+    },
+    "o_skill_peacemaker_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_now_or_never",
+        "o_pass_skill_triumph",
+        "o_skill_unwavering_stance_ico"
+      ]
+    }
+  },
+  "dual": {
+    "o_skill_series_of_strikes_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_dual_wielding_training": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_deflect_ico": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_dying_fervor": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_enough_for_everyone_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_dual_wielding_training",
+        "o_skill_series_of_strikes_ico"
+      ]
+    },
+    "o_skill_honed_moves_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_dual_wielding_training",
+        "o_skill_series_of_strikes_ico"
+      ]
+    },
+    "o_pass_skill_berserk_traditions": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_dying_fervor",
+        "o_skill_deflect_ico"
+      ]
+    },
+    "o_pass_skill_unstoppable": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_skill_enough_for_everyone_ico"
+      ]
+    },
+    "o_skill_whirlwind_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_berserk_traditions",
+        "o_skill_honed_moves_ico"
+      ]
+    },
+    "o_pass_skill_more_blood": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_berserk_traditions",
+        "o_skill_honed_moves_ico"
+      ]
+    }
+  },
+  "combat": {
+    "o_skill_seize_the_initiative_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_opportune_moment": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_preparation": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_war_cry_ico": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_right_on_target": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_seize_the_initiative_ico"
+      ]
+    },
+    "o_skill_offensive_tactics_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_opportune_moment"
+      ]
+    },
+    "o_skill_defensive_tactics_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_preparation"
+      ]
+    },
+    "o_pass_skill_intimidation": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_war_cry_ico"
+      ]
+    },
+    "o_skill_finisher_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_intimidation",
+        "o_pass_skill_right_on_target",
+        "o_skill_defensive_tactics_ico",
+        "o_skill_offensive_tactics_ico"
+      ]
+    },
+    "o_pass_skill_stance_training": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_intimidation",
+        "o_pass_skill_right_on_target",
+        "o_skill_defensive_tactics_ico",
+        "o_skill_offensive_tactics_ico"
+      ]
+    },
+    "o_skill_against_the_odds_ico": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_intimidation",
+        "o_pass_skill_right_on_target",
+        "o_skill_defensive_tactics_ico",
+        "o_skill_offensive_tactics_ico"
+      ]
+    },
+    "o_pass_skill_armor_breaker": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_skill_finisher_ico"
+      ]
+    },
+    "o_skill_thirst_for_battle_ico": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_stance_training"
+      ]
+    },
+    "o_pass_skill_last_effort": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_skill_against_the_odds_ico"
+      ]
+    }
+  },
+  "athletic": {
+    "o_pass_skill_disengage": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_sweep_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_never_again": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_power_kick_ico": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_dash_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_disengage"
+      ]
+    },
+    "o_pass_skill_inner_reserves": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_skill_sweep_ico"
+      ]
+    },
+    "o_skill_sudden_strike_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_never_again"
+      ]
+    },
+    "o_pass_skill_vivifying_violence": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_power_kick_ico"
+      ]
+    },
+    "o_skill_elusiveness_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_inner_reserves",
+        "o_skill_dash_ico"
+      ]
+    },
+    "o_pass_skill_no_time_to_linger": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_vivifying_violence",
+        "o_skill_sudden_strike_ico"
+      ]
+    },
+    "o_pass_skill_sprint_training": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_no_time_to_linger",
+        "o_skill_elusiveness_ico"
+      ]
+    },
+    "o_skill_adrenaline_rush_ico": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_no_time_to_linger",
+        "o_skill_elusiveness_ico"
+      ]
+    },
+    "o_pass_skill_peak_performance": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_no_time_to_linger",
+        "o_skill_elusiveness_ico"
+      ]
+    }
+  },
+  "armor": {
+    "o_pass_skill_self_repair": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_brace_for_impact_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_hard_target": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_active_defence_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_hard_target",
+        "o_skill_brace_for_impact_ico"
+      ]
+    },
+    "o_pass_skill_battle_hardiness": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_hard_target",
+        "o_skill_brace_for_impact_ico"
+      ]
+    },
+    "o_skill_unyielding_defence_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_hard_target",
+        "o_skill_brace_for_impact_ico"
+      ]
+    },
+    "o_skill_battering_ram_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_battle_hardiness",
+        "o_skill_active_defence_ico",
+        "o_skill_unyielding_defence_ico"
+      ]
+    },
+    "o_pass_skill_armor_adjustment": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_battle_hardiness",
+        "o_skill_active_defence_ico",
+        "o_skill_unyielding_defence_ico"
+      ]
+    }
+  },
+  "survival": {
+    "o_pass_skill_halt": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_cauterize_wounds_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_resourcefulness": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_halt",
+        "o_skill_cauterize_wounds_ico"
+      ]
+    },
+    "o_pass_skill_trailblazer": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_halt",
+        "o_skill_cauterize_wounds_ico"
+      ]
+    },
+    "o_pass_skill_asceticism": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_halt",
+        "o_skill_cauterize_wounds_ico"
+      ]
+    },
+    "o_skill_first_aid_ico": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_halt",
+        "o_skill_cauterize_wounds_ico"
+      ]
+    },
+    "o_pass_skill_huntmaster": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_resourcefulness",
+        "o_pass_skill_trailblazer"
+      ]
+    },
+    "o_pass_skill_lightning_reflexes": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_resourcefulness",
+        "o_pass_skill_trailblazer"
+      ]
+    },
+    "o_pass_skill_adaptability": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_asceticism",
+        "o_skill_first_aid_ico"
+      ]
+    },
+    "o_skill_will_to_survive_ico": {
+      "col": 3,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_asceticism",
+        "o_skill_first_aid_ico"
+      ]
+    }
+  },
+  "magic_mastery": {
+    "o_skill_seal_of_finesse_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_precise_movements": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_dispersion": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_seal_of_power_ico": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_seal_of_insight_ico": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_precise_movements",
+        "o_skill_seal_of_finesse_ico"
+      ]
+    },
+    "o_pass_skill_lingering_incantations": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_precise_movements",
+        "o_skill_seal_of_finesse_ico"
+      ]
+    },
+    "o_skill_seal_of_cleansing_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_dispersion"
+      ]
+    },
+    "o_pass_skill_spirit_and_body": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_seal_of_power_ico"
+      ]
+    },
+    "o_pass_skill_thaumaturgy": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_lingering_incantations",
+        "o_skill_seal_of_insight_ico"
+      ]
+    },
+    "o_skill_seal_of_reflection_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_spirit_and_body",
+        "o_skill_seal_of_cleansing_ico"
+      ]
+    },
+    "o_skill_seal_of_shackles_ico": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_thaumaturgy",
+        "o_skill_seal_of_reflection_ico"
+      ]
+    },
+    "o_pass_skill_magic_lore": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_thaumaturgy",
+        "o_skill_seal_of_reflection_ico"
+      ]
+    }
+  },
+  "pyromancy": {
+    "o_skill_fire_barrage_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_flame_saturation": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_baptism_of_fire": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_flame_ring_ico": {
+      "col": 3,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_feed_the_flames": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_fire_barrage_ico"
+      ]
+    },
+    "o_skill_flame_wave_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_flame_saturation"
+      ]
+    },
+    "o_skill_magma_rain_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_baptism_of_fire",
+        "o_skill_flame_ring_ico"
+      ]
+    },
+    "o_pass_skill_scorch": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_baptism_of_fire",
+        "o_skill_flame_ring_ico"
+      ]
+    },
+    "o_skill_incineration_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_feed_the_flames",
+        "o_pass_skill_scorch",
+        "o_skill_flame_wave_ico",
+        "o_skill_magma_rain_ico"
+      ]
+    },
+    "o_pass_skill_safe_distance": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_feed_the_flames",
+        "o_pass_skill_scorch",
+        "o_skill_flame_wave_ico",
+        "o_skill_magma_rain_ico"
+      ]
+    },
+    "o_skill_melting_ray_ico": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_feed_the_flames",
+        "o_pass_skill_scorch",
+        "o_skill_flame_wave_ico",
+        "o_skill_magma_rain_ico"
+      ]
+    },
+    "o_pass_skill_excess_heat": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_safe_distance",
+        "o_skill_incineration_ico",
+        "o_skill_melting_ray_ico"
+      ]
+    },
+    "o_skill_inferno_ico": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_safe_distance",
+        "o_skill_incineration_ico",
+        "o_skill_melting_ray_ico"
+      ]
+    },
+    "o_pass_skill_pyromania": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_safe_distance",
+        "o_skill_incineration_ico",
+        "o_skill_melting_ray_ico"
+      ]
+    }
+  },
+  "geomancy": {
+    "o_skill_runic_boulder_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_stone_armor_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_rune_of_fortifying": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_runic_boulder_ico"
+      ]
+    },
+    "o_skill_stone_spikes_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_skill_runic_boulder_ico"
+      ]
+    },
+    "o_pass_skill_rune_of_weakening": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_skill_runic_boulder_ico"
+      ]
+    },
+    "o_pass_skill_rune_of_support": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_stone_armor_ico"
+      ]
+    },
+    "o_skill_earth_quake_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_rune_of_fortifying",
+        "o_skill_stone_spikes_ico"
+      ]
+    },
+    "o_pass_skill_rune_of_binding": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_rune_of_fortifying",
+        "o_skill_stone_spikes_ico"
+      ]
+    },
+    "o_pass_skill_rune_of_impact": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_rune_of_weakening"
+      ]
+    },
+    "o_skill_petrification_ico": {
+      "col": 3,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_rune_of_weakening"
+      ]
+    },
+    "o_pass_skill_rune_of_power": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_skill_earth_quake_ico"
+      ]
+    },
+    "o_skill_runic_explosion_ico": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_rune_of_binding"
+      ]
+    },
+    "o_skill_boulder_toss_ico": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_rune_of_impact"
+      ]
+    },
+    "o_pass_skill_rune_of_engulfment": {
+      "col": 3,
+      "row": 3,
+      "requires": [
+        "o_skill_petrification_ico"
+      ]
+    }
+  },
+  "electromancy": {
+    "o_skill_discharge_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_impulse_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_residual_charge": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_skill_discharge_ico"
+      ]
+    },
+    "o_skill_short_circuit_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_skill_discharge_ico"
+      ]
+    },
+    "o_skill_static_field_ico": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_skill_impulse_ico"
+      ]
+    },
+    "o_pass_skill_potential_difference": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_skill_impulse_ico"
+      ]
+    },
+    "o_skill_chain_lightning_ico": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_residual_charge",
+        "o_skill_short_circuit_ico"
+      ]
+    },
+    "o_pass_skill_unlimited_power": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_residual_charge",
+        "o_skill_short_circuit_ico"
+      ]
+    },
+    "o_pass_skill_conduit": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_potential_difference",
+        "o_skill_static_field_ico"
+      ]
+    },
+    "o_skill_ball_lightning_ico": {
+      "col": 3,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_potential_difference",
+        "o_skill_static_field_ico"
+      ]
+    },
+    "o_pass_skill_chain_reaction": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_conduit",
+        "o_pass_skill_unlimited_power",
+        "o_skill_ball_lightning_ico",
+        "o_skill_chain_lightning_ico"
+      ]
+    },
+    "o_pass_skill_resonance_cascade": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_conduit",
+        "o_pass_skill_unlimited_power",
+        "o_skill_ball_lightning_ico",
+        "o_skill_chain_lightning_ico"
+      ]
+    },
+    "o_skill_tempest_ico": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_conduit",
+        "o_pass_skill_unlimited_power",
+        "o_skill_ball_lightning_ico",
+        "o_skill_chain_lightning_ico"
+      ]
+    },
+    "o_pass_skill_recharge": {
+      "col": 3,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_conduit",
+        "o_pass_skill_unlimited_power",
+        "o_skill_ball_lightning_ico",
+        "o_skill_chain_lightning_ico"
+      ]
+    }
+  },
+  "arcanistics": {
+    "o_skill_wormhole_ico": {
+      "col": 0,
+      "row": 0,
+      "requires": []
+    },
+    "o_skill_planar_exchange_ico": {
+      "col": 1,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_arcane_might": {
+      "col": 2,
+      "row": 0,
+      "requires": []
+    },
+    "o_pass_skill_temporal_echo": {
+      "col": 0,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_arcane_might",
+        "o_skill_planar_exchange_ico",
+        "o_skill_wormhole_ico"
+      ]
+    },
+    "o_skill_schism_ico": {
+      "col": 1,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_arcane_might",
+        "o_skill_planar_exchange_ico",
+        "o_skill_wormhole_ico"
+      ]
+    },
+    "o_pass_skill_spatial_anchors": {
+      "col": 2,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_arcane_might",
+        "o_skill_planar_exchange_ico",
+        "o_skill_wormhole_ico"
+      ]
+    },
+    "o_skill_aether_shield_ico": {
+      "col": 3,
+      "row": 1,
+      "requires": [
+        "o_pass_skill_arcane_might",
+        "o_skill_planar_exchange_ico",
+        "o_skill_wormhole_ico"
+      ]
+    },
+    "o_pass_skill_astral_tides": {
+      "col": 0,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_spatial_anchors",
+        "o_skill_aether_shield_ico",
+        "o_skill_schism_ico"
+      ]
+    },
+    "o_skill_mana_crystal_ico": {
+      "col": 1,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_spatial_anchors",
+        "o_skill_aether_shield_ico",
+        "o_skill_schism_ico"
+      ]
+    },
+    "o_skill_stasis_ico": {
+      "col": 2,
+      "row": 2,
+      "requires": [
+        "o_pass_skill_spatial_anchors",
+        "o_skill_aether_shield_ico",
+        "o_skill_schism_ico"
+      ]
+    },
+    "o_skill_astral_phantasm_ico": {
+      "col": 0,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_astral_tides",
+        "o_skill_mana_crystal_ico"
+      ]
+    },
+    "o_pass_skill_extraplanar_geometry": {
+      "col": 1,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_astral_tides",
+        "o_skill_mana_crystal_ico"
+      ]
+    },
+    "o_pass_skill_aethereal_harmony": {
+      "col": 2,
+      "row": 3,
+      "requires": [
+        "o_pass_skill_astral_tides",
+        "o_skill_mana_crystal_ico"
+      ]
+    },
+    "o_pass_skill_beyond_the_veil": {
+      "col": 3,
+      "row": 3,
+      "requires": [
+        "o_skill_stasis_ico"
+      ]
+    }
+  }
+}

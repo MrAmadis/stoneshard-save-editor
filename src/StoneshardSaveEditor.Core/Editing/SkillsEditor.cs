@@ -71,6 +71,46 @@ public sealed class SkillsEditor(SaveSession session)
         session.MarkChanged();
     }
 
+    /// <summary>
+    /// With game rules the skill must be available and costs an ability point, and the skills it opens unlock.
+    /// Without (<paramref name="rules"/> null) it only toggles: no point is spent.
+    /// </summary>
+    public void Learn(string obj, SkillRules? rules)
+    {
+        if (rules is null)
+        {
+            Learn(obj, spendPoint: false);
+            return;
+        }
+        var state = Read();
+        if (!rules.CanLearn(obj, state))
+            throw new EditRejectedException(state.Any(s => s.Object == obj && s.Learned)
+                ? "That skill is already learned"
+                : "That skill isn't available yet");
+        var unlock = rules.ToUnlockAfterLearn(obj, state);
+        Learn(obj, spendPoint: true);
+        Unlock(unlock);
+    }
+
+    /// <summary>
+    /// With game rules a skill that a learned skill needs can't be unlearned; otherwise the point comes back and the
+    /// skills that needed it lock again. Without (<paramref name="rules"/> null) it only toggles: no point is refunded.
+    /// </summary>
+    public void Unlearn(string obj, SkillRules? rules)
+    {
+        if (rules is null)
+        {
+            Unlearn(obj, refundPoint: false);
+            return;
+        }
+        var state = Read();
+        if (rules.BlockingDependent(obj, state) is { } dependent)
+            throw new EditRejectedException($"Unlearn {dependent} first");
+        var relock = rules.ToRelockAfterUnlearn(obj, state);
+        Unlearn(obj, refundPoint: true);
+        Lock(relock);
+    }
+
     /// <summary>Unlearns every skill that was bought and refunds a point for each.</summary>
     public int RespecAll() => RefundTree(Read().Select(s => s.Object));
 

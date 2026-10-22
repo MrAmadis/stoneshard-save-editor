@@ -9,7 +9,13 @@ public sealed record SlotView(string Folder, string DisplayName, DateTime SavedA
 
 public sealed record CharacterView(string Folder, string Name, string? ClassName, int? Level, string AvatarSprite, IReadOnlyList<SlotView> Slots);
 
-public sealed record SkillView(string Object, string DisplayName, string Sprite, bool Passive, bool Learned, bool Locked, int? Col, int? Row);
+/// <param name="Locked">As the save has it; the game recomputes locks inside open trees when it loads.</param>
+/// <param name="Available">Learnable under the game rules: everything it needs is learned (first tier: its tree is open).
+/// Without rules loaded, the save's own flag.</param>
+/// <param name="Requires">The skills this one needs, as object names (empty for the first tier or without a layout).</param>
+public sealed record SkillView(
+    string Object, string DisplayName, string Sprite, bool Passive, bool Learned, bool Locked, bool Available, int? Col, int? Row,
+    IReadOnlyList<string> Requires);
 
 public sealed record SkillTreeView(
     string Id, string DisplayName, string? TreatisePrefix, bool Open, int LearnedCount, bool CanUnlock, IReadOnlyList<SkillView> Skills);

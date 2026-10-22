@@ -18,6 +18,7 @@
     --danger-border: #a5463b;
     --durability: #7fb04f;
     --available: #7a8f5a;
+    --link: #6f6296;
     --cell: 54px;
 }
 
@@ -290,7 +291,17 @@ img.px, img.preview { image-rendering: pixelated; }
 .tree-view .unlock-tree { margin-bottom: 12px; }
 .row-label { font: 11px system-ui, sans-serif; color: #8c7a5c; margin-top: 6px; }
 .skill-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0 16px; }
-.skill-grid { display: grid; grid-auto-columns: 82px; gap: 14px; margin: 6px 0 16px; }
+.skill-row.centered { justify-content: center; gap: 22px; margin: 4px 0 22px; }
+.skill-tree { position: relative; margin: 10px auto 18px; }
+.skill-tree .skill-row { position: absolute; left: 0; right: 0; margin: 0; flex-wrap: nowrap; }
+.skill-cell { display: inline-flex; }
+.links { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.links path { fill: none; stroke: var(--link); stroke-width: 2; }
+.links circle { fill: var(--link); }
+.links g.met path { stroke: var(--gold-border); }
+.links g.met circle { fill: var(--gold-border); }
+.links g.hi path { stroke: #f3e3bd; stroke-width: 3; }
+.links g.hi circle { fill: #f3e3bd; }
 .skill {
     width: 82px;
     padding: 0;

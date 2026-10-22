@@ -24,9 +24,18 @@ Test characters were copies of Velmir (`character_2/exitsave_1`); the owner's re
 | Exit saves | Test characters 4 (Brynn), 6 (Denbrie) and 8 (Brynn_NW) **disappeared**; 3, 5 and 7, which the game re-saved on quitting, remain. | Stoneshard consumes an exit save when it is loaded and writes a new one only on a proper quit; a character whose only save was consumed is removed. Test characters should get a manual-save slot too, and the checklist must say "quit to the main menu". The editor itself is unaffected. |
 | Steam Cloud | Not reported yet. | Check in the next session. |
 
+## Session B — 2026-10-22
+
+Built with `Lab make-session-b`; saves captured by the Lab watcher in `tests/fixtures/experiments/session-b/`.
+
+| Experiment | Observation (owner + save snapshots) | Decision |
+|---|---|---|
+| B1 Brynn: every tree opened and every skill learned | 22 screenshots (`…\screenshots61022205947_1.jpg` to `…210021_1.jpg`) show every icon and the lines between them. Basic Skills shows its 4 known skills over 12 padlocked slots that are not in the save; Survival's top row also shows Butchering. | Transcribed into `skill-trees.json` (21 trees, 227 skills): row, order in the row, and requirements. A shared bar means every skill above it is needed (as A3 showed for Greataxes); every line into a skill is read as "needed". Butchering (innate, filed under Basic) is left out of Survival's requirements; Basic has no layout. |
+| B2 Denbrie: gold coin stacks 100, 50, 7 in the bag; equipped bolts 5 | Bolts showed 5. The gold total first showed just over 3000 (purse 2864 + 157 coins). After opening the purse it showed **157**: the purse was empty and the coins were loose in the inventory. | Ammo counts work. A purse's gold is the coin stacks **inside it** (its `lootList`, stacks of up to 100); its `Stack` is only a cached total the game recomputes when the purse is opened. Velmir's purse claims 2864 with no coins inside (since his `save_2` of 2026-10-21, before this editor existed; `autosave_1` still had 136 as coins 100 + 36). Editing gold must write coins into the purse, not just `Stack`. |
+| B3 Brynn_NW: Pyromancy opened by the editor, Treatises II–IV read | The tree opened with its first skills available without reading a book; II, III and IV each unlocked one row. | **Unlock tree** works. Volume II → Scorch, Feed the Flames, Magma Rain, Flame Wave; III → From Blaze to Furnace (`o_pass_skill_safe_distance`), Melting Ray, Incineration; IV → Pyromania, Excess Heat, Inferno. "Unlock tree" opens what Volume I opens. |
+| Exit saves | Characters 8 and 9 disappeared again after loading; 10 was re-saved on each quit. | As in session A: loading an exit save consumes it. |
+
 ### Still open (next in-game session)
 
-- Pyromancy treatise volumes II–IV: do they unlock more of the tree?
-- Steam Cloud: does an edited save survive a full Steam restart?
-- Gold coin stacks and ammo counts added or changed by the editor.
-- **Unlock tree** done by the editor (flags + `Books_Read`) behaves like reading the book.
+- Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt was reported in session B.)
+- Gold written as coins inside the purse: survives opening the purse, and how many stacks a purse holds.

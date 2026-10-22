@@ -201,7 +201,7 @@ public class EditorServiceTests
         Assert.Equal("Hooking Chop", greataxes.Skills.Single(s => s.Object == "o_skill_wide_cut_ico").DisplayName);
         var pyromancy = session.Trees.Single(t => t.Id == "pyromancy");
         Assert.Equal((false, true), (pyromancy.Open, pyromancy.CanUnlock));
-        Assert.False(session.RulesAvailable);
+        Assert.True(session.RulesAvailable);
         Assert.Equal("Caravan Camp", session.Location);
         Assert.Contains(session.Reputation, r => r.Name == "Rotten Willow");
         Assert.Equal("s_inv_moneybag", session.Items.Single(i => i.Name == "o_inv_moneybag").Sprite);
@@ -209,7 +209,9 @@ public class EditorServiceTests
         Assert.True(h.Editor.Catalog().Count > 1000);
         Assert.Contains(h.Editor.AddItem("o_inv_treatise_pyro1").Items, i => i.Name == "o_inv_treatise_pyro1");
 
-        Assert.True(h.Editor.UnlockTree("pyromancy").Trees.Single(t => t.Id == "pyromancy").Open);
+        var opened = h.Editor.UnlockTree("pyromancy").Trees.Single(t => t.Id == "pyromancy");
+        Assert.True(opened.Open);
+        Assert.Equal(4, opened.Skills.Count(s => !s.Locked)); // Volume I's first tier only
         Assert.Throws<EditRejectedException>(() => h.Editor.UnlockTree("combat"));
 
         Assert.Equal(6, h.Editor.RespecAll().Character[CharacterField.AbilityPoints]);

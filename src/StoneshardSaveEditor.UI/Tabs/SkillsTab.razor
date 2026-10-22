@@ -20,7 +20,7 @@
     @Points(CharacterField.AbilityPoints, "Ability points")
     @Points(CharacterField.StatPoints, "Stat points")
     <button class="btn danger respec" disabled="@(Session.Trees.Count == 0)" @onclick="() => _confirmRespec = true">Respec all</button>
-    <button class="btn refund-tree" disabled="@(tree is null || tree.LearnedCount == 0)" @onclick="() => Edit(() => EditorService.RefundTree(tree!.Id))">Refund this tree</button>
+    <button class="btn refund-tree" disabled="@(tree is null || tree.LearnedCount == 0)" @onclick="() => Edit(() => EditorService.RefundTree(tree!.Id, Rules))">Refund this tree</button>
     <label class="rules-toggle" title="@(Session.RulesAvailable ? "Prerequisites and point costs work as in the game" : "Tree rules not loaded yet")">
         <input type="checkbox" class="rules" checked="@Rules" disabled="@(!Session.RulesAvailable)" @onchange="e => _rules = e.Value is true" />
         Follow game rules
@@ -52,12 +52,29 @@ else
                 <button class="btn gold unlock-tree" disabled="@(!tree.CanUnlock)" title="@(tree.CanUnlock ? null : "There's no unlock data for this tree yet")"
                         @onclick="() => Edit(() => EditorService.UnlockTree(tree.Id))">Unlock tree</button>
             }
-            @if (tree.Skills.All(s => s.Col is not null && s.Row is not null))
+            @if (SkillTreeDrawing.For(tree) is { } drawing)
             {
-                <div class="skill-grid">
-                    @foreach (var skill in tree.Skills)
+                <div class="skill-tree" style="width:@(drawing.Width)px;height:@(drawing.Height)px">
+                    <svg class="links" width="@drawing.Width" height="@drawing.Height" aria-hidden="true">
+                        @foreach (var link in drawing.Links)
+                        {
+                            <g class="@LinkClass(tree, link)" data-parents="@string.Join(' ', link.Parents)" data-children="@string.Join(' ', link.Children)">
+                                <path d="@link.Path" />
+                                @foreach (var (x, y) in link.Dots)
+                                {
+                                    <circle cx="@x.ToString("0.#", CultureInfo.InvariantCulture)" cy="@y.ToString("0.#", CultureInfo.InvariantCulture)" r="3" />
+                                }
+                            </g>
+                        }
+                    </svg>
+                    @foreach (var (top, skills) in drawing.Rows)
                     {
-                        @SkillButton(tree, skill)
+                        <div class="skill-row centered" style="top:@(top)px">
+                            @foreach (var skill in skills)
+                            {
+                                @SkillButton(tree, skill)
+                            }
+                        </div>
                     }
                 </div>
             }
@@ -87,6 +104,7 @@ else
     private static readonly (string Label, bool Passive)[] Rows = [("Passives", true), ("Abilities", false)];
 
     private string? _treeId;
+    private string? _hover;
     private bool _rules = true;
     private bool _confirmRespec;
 
@@ -111,29 +129,42 @@ else
         </text>;
 
     private RenderFragment SkillButton(SkillTreeView tree, SkillView skill) =>
-        @<button class="skill @State(skill)" data-skill="@skill.Object" disabled="@(!Clickable(tree, skill))" title="@Tip(tree, skill)"
-                 style="@(skill.Col is { } col && skill.Row is { } row ? $"grid-column:{col + 1};grid-row:{row + 1}" : null)"
-                 @onclick="() => Toggle(skill)">
-            <Icon Sprite="@skill.Sprite" Width="48" Height="48" Alt="@skill.DisplayName" />
-            <span class="nm">@skill.DisplayName</span>
-        </button>;
+        @<span class="skill-cell" data-skill="@skill.Object" @onmouseover="() => _hover = skill.Object" @onmouseout="() => _hover = null">
+            <button class="skill @State(skill)" data-skill="@skill.Object" disabled="@(!Clickable(tree, skill))" title="@Tip(tree, skill)"
+                    @onclick="() => Toggle(skill)">
+                <Icon Sprite="@skill.Sprite" Width="48" Height="48" Alt="@skill.DisplayName" />
+                <span class="nm">@skill.DisplayName</span>
+            </button>
+        </span>;
 
-    private static string State(SkillView skill) => skill.Learned ? "learned" : skill.Locked ? "locked" : "available";
+    /// <summary>Gold once everything the link needs is learned; highlighted while one of its skills is under the mouse.</summary>
+    private string LinkClass(SkillTreeView tree, SkillTreeDrawing.Link link)
+    {
+        var met = link.Parents.All(p => tree.Skills.Any(s => s.Object == p && s.Learned));
+        var hover = _hover is not null && (link.Parents.Contains(_hover) || link.Children.Contains(_hover));
+        return $"{(met ? "met" : "")} {(hover ? "hi" : "")}".Trim();
+    }
+
+    private static List<string> NeedNames(SkillTreeView tree, SkillView skill) =>
+        skill.Requires.Select(o => tree.Skills.FirstOrDefault(s => s.Object == o)?.DisplayName ?? o).ToList();
+
+    /// <summary>With game rules, availability follows the prerequisites; without, the save's own lock flag.</summary>
+    private string State(SkillView skill) => skill.Learned ? "learned" : (Rules ? skill.Available : !skill.Locked) ? "available" : "locked";
 
     /// <summary>
     /// Learned and available skills toggle. Without game rules a locked skill can be learned directly too, which the
     /// game accepts (in-game findings A3). Skills of a closed tree wait for "Unlock tree".
     /// </summary>
-    private bool Clickable(SkillTreeView tree, SkillView skill) => tree.Open && (skill.Learned || !skill.Locked || !Rules);
+    private bool Clickable(SkillTreeView tree, SkillView skill) => tree.Open && (skill.Learned || !Rules || skill.Available);
 
-    private string Tip(SkillTreeView tree, SkillView skill) => (tree.Open, skill.Learned, skill.Locked, Rules) switch
+    private string Tip(SkillTreeView tree, SkillView skill) => (tree.Open, skill.Learned, State(skill) == "locked", Rules) switch
     {
         (false, _, _, _) => "Unlock the tree first",
         (_, true, _, true) => "Learned. Click to unlearn and get the ability point back",
         (_, true, _, false) => "Learned. Click to unlearn",
         (_, _, false, true) => "Click to learn for 1 ability point",
         (_, _, false, false) => "Click to learn",
-        (_, _, true, true) => "Locked: learn the skills before it first",
+        (_, _, true, true) => skill.Requires.Count > 0 ? $"Locked: learn {Names.List(NeedNames(tree, skill))} first" : "Locked: learn the skills before it first",
         _ => "Locked in the game. Click to learn it anyway",
     };
 
@@ -148,6 +179,6 @@ else
     private void Respec()
     {
         _confirmRespec = false;
-        Edit(() => EditorService.RespecAll());
+        Edit(() => EditorService.RespecAll(Rules));
     }
 }

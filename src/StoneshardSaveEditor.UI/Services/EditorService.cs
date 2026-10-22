@@ -170,21 +170,35 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         Edit(s => Inventory(s).SetGold(amount, () => RequireGame().Catalog.CreateEntry(MoneybagKey, s.Root)));
 
     /// <param name="rules">Follow game rules: the skill must be available and costs an ability point.</param>
-    public SessionView LearnSkill(string obj, bool rules) => Edit(s =>
+    public SessionView LearnSkill(string obj, bool rules) => Edit(s => new SkillsEditor(s).Learn(obj, rules ? RulesFor(s) : null));
+
+    /// <param name="rules">Follow game rules: unlearning refunds an ability point and is refused while a learned skill needs it.</param>
+    public SessionView UnlearnSkill(string obj, bool rules) => Edit(s =>
     {
         var skills = new SkillsEditor(s);
-        if (rules && skills.Read().FirstOrDefault(x => x.Object == obj) is { Locked: true })
-            throw new EditRejectedException("That skill isn't available yet");
-        skills.Learn(obj, spendPoint: rules);
+        var gameRules = rules ? RulesFor(s) : null;
+        if (gameRules?.BlockingDependent(obj, skills.Read()) is { } dependent)
+            throw new EditRejectedException($"Unlearn {SkillName(s, dependent)} first");
+        skills.Unlearn(obj, gameRules);
     });
 
-    /// <param name="rules">Follow game rules: unlearning refunds an ability point.</param>
-    public SessionView UnlearnSkill(string obj, bool rules) => Edit(s => new SkillsEditor(s).Unlearn(obj, refundPoint: rules));
+    /// <param name="rules">Follow game rules: afterwards only first-tier skills stay available.</param>
+    public SessionView RespecAll(bool rules = false) => Edit(s =>
+    {
+        var skills = new SkillsEditor(s);
+        skills.RespecAll();
+        if (rules && RulesFor(s) is { } gameRules)
+            skills.Lock(gameRules.ToRelockAfterRespec(skills.Read()));
+    });
 
-    public SessionView RespecAll() => Edit(s => new SkillsEditor(s).RespecAll());
-
-    public SessionView RefundTree(string treeId) =>
-        Edit(s => new SkillsEditor(s).RefundTree(Tree(s, treeId).Skills.Select(k => k.Object)));
+    public SessionView RefundTree(string treeId, bool rules = false) => Edit(s =>
+    {
+        var skills = new SkillsEditor(s);
+        var inTree = Tree(s, treeId).Skills.Select(k => k.Object).ToHashSet();
+        skills.RefundTree(inTree);
+        if (rules && RulesFor(s) is { } gameRules)
+            skills.Lock(gameRules.ToRelockAfterRespec(skills.Read()).Where(inTree.Contains));
+    });
 
     /// <summary>Opens a closed tree the way reading its first treatise does (observed in-game).</summary>
     public SessionView UnlockTree(string treeId) => Edit(s =>
@@ -223,6 +237,12 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     private InventoryEditor Inventory(SaveSession s) => new(s, (IItemShapeProvider?)game.Files?.Shapes ?? UnknownShapes.Instance);
 
+    /// <summary>The game's skill prerequisites, or null while they aren't loaded (then rules are off).</summary>
+    private SkillRules? RulesFor(SaveSession s) => SkillsFor(s)?.Rules();
+
+    private string SkillName(SaveSession s, string obj) =>
+        SkillsFor(s)?.Trees.SelectMany(t => t.Skills).FirstOrDefault(k => k.Object == obj)?.DisplayName ?? obj;
+
     private SkillCatalog? SkillsFor(SaveSession s)
     {
         if (_skills is not null || game.Files is not { } files)
@@ -249,6 +269,8 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         var inventory = Inventory(s);
         var state = SkillsEditor.ReadFrom(s.Root).ToDictionary(x => x.Object);
         var catalog = SkillsFor(s);
+        var rules = catalog?.Rules();
+        var stateList = state.Values.ToList();
 
         var trees = catalog?.Trees.Select(t =>
         {
@@ -257,15 +279,18 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             {
                 var current = state.GetValueOrDefault(k.Object);
                 var at = layout?.Skills.GetValueOrDefault(k.Object);
-                return new SkillView(k.Object, k.DisplayName, k.Sprite, k.Passive, current?.Learned ?? false, current?.Locked ?? true, at?.Col, at?.Row);
+                var learned = current?.Learned ?? false;
+                var locked = current?.Locked ?? true;
+                var available = !learned && (rules?.CanLearn(k.Object, stateList) ?? !locked);
+                return new SkillView(k.Object, k.DisplayName, k.Sprite, k.Passive, learned, locked, available, at?.Col, at?.Row,
+                    at?.Requires ?? []);
             }).ToList();
             var open = skills.Any(k => k.Learned || !k.Locked);
             return new SkillTreeView(t.Id, t.DisplayName, t.TreatisePrefix, open, skills.Count(k => k.Learned),
                 !open && catalog.UnlockSet(t.Id).Count > 0, skills);
         }).ToList() ?? [];
 
-        var rulesAvailable = catalog is not null
-                             && catalog.Trees.Where(t => t.TreatisePrefix is not null).All(t => catalog.Layout(t.Id) is not null);
+        var rulesAvailable = rules is not null;
         var reputation = new ReputationEditor(s).Read()
             .Select(r => new ReputationView(Names.Pretty(r.VillageKey, null), r.LocationKey, r.Value))
             .ToList();

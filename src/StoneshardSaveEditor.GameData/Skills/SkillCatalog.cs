@@ -66,17 +66,27 @@ public sealed partial class SkillCatalog
 
     public SkillTree TreeOf(string obj) => _treeOf[obj];
 
-    /// <summary>Skills a closed tree's treatises unlock (all volumes together); empty until observed in-game.</summary>
+    /// <summary>Skills that opening a closed tree unlocks: what reading its Volume I unlocked in-game; empty until observed.</summary>
     public IReadOnlyList<string> UnlockSet(string treeId) =>
-        Trees.FirstOrDefault(t => t.Id == treeId)?.TreatisePrefix is { } prefix ? UnionForTreatise(_unlocks, prefix) : [];
+        Trees.FirstOrDefault(t => t.Id == treeId)?.TreatisePrefix is { } prefix ? FirstVolume(_unlocks, prefix) : [];
 
     public TreeLayout? Layout(string treeId) => _layouts.GetValueOrDefault(treeId);
 
-    public static IReadOnlyList<string> UnionForTreatise(IReadOnlyDictionary<string, string[]> unlocks, string prefix) =>
-        unlocks.Where(e => Regex.IsMatch(e.Key, $"^{Regex.Escape(prefix)}\\d+$"))
-            .SelectMany(e => e.Value)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+    /// <summary>The game's prerequisites for "Follow game rules", or null until every tree with a treatise has a layout.</summary>
+    public SkillRules? Rules()
+    {
+        if (Trees.Any(t => t.TreatisePrefix is not null && Layout(t.Id) is null))
+            return null;
+        var requires = _layouts.Values.SelectMany(l => l.Skills).ToDictionary(s => s.Key, s => s.Value.Requires);
+        return new SkillRules(requires, obj => FirstTier(TreeOf(obj).Id));
+    }
+
+    private List<string> FirstTier(string treeId) =>
+        Layout(treeId)?.Skills.Where(s => s.Value.Requires.Length == 0).Select(s => s.Key).ToList() ?? [];
+
+    /// <summary>Volume I's unlocks for a treatise prefix ("pyro" → "pyro1"); later volumes unlock the later rows.</summary>
+    public static IReadOnlyList<string> FirstVolume(IReadOnlyDictionary<string, string[]> unlocks, string prefix) =>
+        unlocks.GetValueOrDefault($"{prefix}1") ?? [];
 
     /// <summary>
     /// The save lists every skill grouped by tree: a block of passives followed by its actives. A block's tree is the
