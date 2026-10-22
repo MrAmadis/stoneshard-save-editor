@@ -36,6 +36,19 @@ public class TestCharacterClonerTests
     }
 
     [Fact]
+    public void Clone_reuses_the_lowest_free_number_above_the_owners_characters()
+    {
+        // The game lists character_1..character_10 only (session C), so test characters fill gaps instead of growing.
+        var root = Fixtures.CopyRealSavesToTemp();
+        foreach (var n in new[] { 3, 4, 11 })
+            Directory.CreateDirectory(Path.Combine(root, $"character_{n}"));
+        Directory.Delete(Path.Combine(root, "character_1"), recursive: true);
+
+        Assert.Equal("character_5", TestCharacterCloner.Clone(root, "character_2", "exitsave_1"));
+        Assert.Equal("character_6", TestCharacterCloner.Clone(root, "character_2", "exitsave_1"));
+    }
+
+    [Fact]
     public void Clone_without_label_keeps_location()
     {
         var root = Fixtures.CopyRealSavesToTemp();
