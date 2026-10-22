@@ -35,7 +35,18 @@ Built with `Lab make-session-b`; saves captured by the Lab watcher in `tests/fix
 | B3 Brynn_NW: Pyromancy opened by the editor, Treatises II–IV read | The tree opened with its first skills available without reading a book; II, III and IV each unlocked one row. | **Unlock tree** works. Volume II → Scorch, Feed the Flames, Magma Rain, Flame Wave; III → From Blaze to Furnace (`o_pass_skill_safe_distance`), Melting Ray, Incineration; IV → Pyromania, Excess Heat, Inferno. "Unlock tree" opens what Volume I opens. |
 | Exit saves | Characters 8 and 9 disappeared again after loading; 10 was re-saved on each quit. | As in session A: loading an exit save consumes it. |
 
-### Still open (next in-game session)
+## Session C — 2026-10-22
 
-- Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt was reported in session B.)
-- Gold written as coins inside the purse: survives opening the purse, and how many stacks a purse holds.
+A purse is a 5 × 4 grid of 20 slots (owner's screenshot), shared by gold coins and valuables such as gems.
+Built with `Lab make-session-c`; saves captured in `tests/fixtures/experiments/session-c/`.
+
+| Experiment | Observation (owner + save snapshots) | Decision |
+|---|---|---|
+| C1 Osbrook: Velmir's empty purse filled by the editor with 1,234 gold (13 stacks, cells down the first column first) | Looks good. The game re-saved the purse with the same 13 stacks and `Stack` 1234; it only reordered them and set each coin's `i_index` to 6 (5 for the 34 stack). | Gold as coin stacks in the purse's `lootList`, with `Stack` = their sum, is accepted. |
+| C2 Mannshire: 4,500 gold as three purses | Looks good. Velmir's purse held a morion (a gem, slot 4) since the owner's 21:38 play, so the editor filled its other 19 slots (1,900) and added purses of 2,000 and 600; the game kept all three unchanged (coins reordered, `i_index` 6). | Several purses work, and valuables keep their slots. |
+| Character list | Characters `character_11` and `character_12` did not appear in the game's list; rebuilt as `character_3`/`character_4`, they did. | Probably the game lists only `character_1`–`character_10`; the Lab should reuse free low numbers. |
+| Steam Cloud | Test characters deleted while the game was closed came back on the next launch (21:50: 5, 7, 10, 11, 12). | Steam Cloud restores files missing locally on launch; delete test characters while the game is running, or in its menu. |
+
+### Still open
+
+- Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
