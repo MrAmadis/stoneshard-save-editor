@@ -1,5 +1,6 @@
 using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.Core.Files;
+using StoneshardSaveEditor.Core.Json;
 using StoneshardSaveEditor.GameData;
 
 namespace StoneshardSaveEditor.UI.Services;
@@ -21,6 +22,7 @@ public sealed record EditorOptions(
 public sealed class EditorService(EditorOptions options, GameDataProvider game)
 {
     private const string MoneybagKey = "o_inv_moneybag";
+    private const string CoinKey = "o_inv_gold";
 
     private readonly Lock _lock = new();
     private readonly BackupService _backups = new(options.BackupRoot);
@@ -150,7 +152,13 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView SetCharges(int index, int value) => Edit(s => Inventory(s).SetCharges(index, value));
 
-    public SessionView SetStack(int index, int value) => Edit(s => Inventory(s).SetStack(index, value));
+    /// <summary>Puts <paramref name="amount"/> gold into one purse as real coin stacks.</summary>
+    public SessionView SetPurseGold(int index, int amount) => Edit(s =>
+    {
+        if (amount > 0)
+            RequireGame();
+        Inventory(s).SetPurseGold(index, amount, () => NewCoin(s));
+    });
 
     public SessionView SetCount(int index, int value) => Edit(s => Inventory(s).SetCount(index, value));
 
@@ -166,8 +174,15 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView AddItem(string key) => Edit(s => Inventory(s).Add(RequireGame().Catalog.CreateEntry(key, s.Root)));
 
-    public SessionView SetGold(int amount) =>
-        Edit(s => Inventory(s).SetGold(amount, () => RequireGame().Catalog.CreateEntry(MoneybagKey, s.Root)));
+    /// <summary>Sets the gold carried, as real coin stacks in purses (adding purses past 2,000).</summary>
+    public SessionView SetGold(int amount) => Edit(s =>
+    {
+        if (amount > 0)
+            RequireGame();
+        Inventory(s).SetGold(amount, () => RequireGame().Catalog.CreateEntry(MoneybagKey, s.Root), () => NewCoin(s));
+    });
+
+    private GmArray NewCoin(SaveSession s) => RequireGame().Catalog.CreateEntry(CoinKey, s.Root);
 
     /// <param name="rules">Follow game rules: the skill must be available and costs an ability point.</param>
     public SessionView LearnSkill(string obj, bool rules) => Edit(s => new SkillsEditor(s).Learn(obj, rules ? RulesFor(s) : null));
@@ -237,6 +252,18 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     private InventoryEditor Inventory(SaveSession s) => new(s, (IItemShapeProvider?)game.Files?.Shapes ?? UnknownShapes.Instance);
 
+    /// <summary>A warning when a purse's cached total isn't backed by coins: the game recounts it when the purse is opened.</summary>
+    private static string? GoldNote(InventoryEditor inventory)
+    {
+        var stale = inventory.StalePurses();
+        if (stale.Count == 0)
+            return null;
+        var (claimed, coins) = (stale.Sum(p => p.Claimed), stale.Sum(p => p.Coins));
+        var purses = stale.Count == 1 ? "The purse says" : $"{stale.Count} purses say";
+        return $"{purses} {claimed} gold but {(stale.Count == 1 ? "holds" : "hold")} {coins} in coins. "
+               + $"The game shows {coins} once the purse is opened; set the gold here to put real coins in it.";
+    }
+
     /// <summary>The game's skill prerequisites, or null while they aren't loaded (then rules are off).</summary>
     private SkillRules? RulesFor(SaveSession s) => SkillsFor(s)?.Rules();
 
@@ -298,7 +325,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         return new SessionView(
             s.Slot.CharacterFolder, s.Slot.SlotFolder, s.Slot.NameKey, s.Slot.AvatarSprite, Names.Pretty(s.Slot.LocationKey, files?.Localization),
             s.ReadOnly, s.ReadOnlyReason, s.ChangeCount, files is not null,
-            new CharacterEditor(s).Read(), inventory.Gold(), inventory.Read(), InventoryEditor.BagRows,
+            new CharacterEditor(s).Read(), inventory.Gold(), GoldNote(inventory), inventory.Read(), InventoryEditor.BagRows,
             trees, rulesAvailable, reputation);
     }
 

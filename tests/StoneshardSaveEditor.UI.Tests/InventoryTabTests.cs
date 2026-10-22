@@ -27,7 +27,7 @@ public class InventoryTabTests
         Assert.Contains("left:162px", style);
         Assert.Contains("top:0px", style);
         Assert.Contains("height:108px", style);
-        Assert.Equal("2864", moneybag.QuerySelector(".badge")!.TextContent);
+        Assert.Null(moneybag.QuerySelector(".badge")); // no coins inside: its cached 2864 is stale
         Assert.Contains("icon://s_inv_voulge", cut.Find(".doll [data-cell='weapon']").InnerHtml);
         Assert.Contains("icon://s_inv_guardcrossbow", cut.Find(".doll [data-cell='set2']").InnerHtml);
     }
@@ -39,7 +39,12 @@ public class InventoryTabTests
         using var _ctx = ctx;
 
         cut.Find(".bag [data-item='o_inv_moneybag']").Click();
-        Assert.Equal("2864", cut.Find(".item-detail [data-field='Gold'] input").GetAttribute("value"));
+        Assert.Equal("0", cut.Find(".item-detail [data-field='Gold'] input").GetAttribute("value"));
+        cut.Find(".item-detail [data-field='Gold'] input").Change("1500");
+        Assert.Equal(1500, h.Editor.Current.Gold);
+        Assert.Equal("1500", cut.Find(".bag [data-item='o_inv_moneybag'] .badge").TextContent);
+        cut.Find(".item-detail [data-field='Gold'] input").Change("2500");
+        Assert.Contains("A purse holds at most 2000 gold", cut.Find(".banner-error").TextContent);
 
         var salve = h.Editor.Current.Items.First(i => i.Name == "o_inv_salve" && i.Charges == 3);
         cut.Find($".bag [data-index='{salve.Index}']").Click();

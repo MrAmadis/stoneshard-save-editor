@@ -21,6 +21,7 @@ try
         "diff" => DiffFiles(options),
         "make-experiments" => MakeExperiments(options),
         "make-session-b" => MakeSessionB(options),
+        "make-session-c" => MakeSessionC(options),
         "extract-unlocks" => ExtractUnlocks(options),
         "watch" => WatchSaves(options),
         _ => Usage(),
@@ -67,6 +68,14 @@ static int MakeSessionB(Dictionary<string, string> o)
     var made = Experiments.BuildSessionB(Required(o, "root"), game, new BackupService(BackupService.DefaultRoot), new GameProcessProbe());
     foreach (var m in made)
         Console.WriteLine($"{m.Folder}\t{m.Label}\t{m.Purpose}");
+    return 0;
+}
+static int MakeSessionC(Dictionary<string, string> o)
+{
+    var game = GameServices.Load(Required(o, "game"));
+    var made = Experiments.BuildSessionC(Required(o, "root"), game, new BackupService(BackupService.DefaultRoot), new GameProcessProbe());
+    foreach (var m in made)
+        Console.WriteLine($"{m.Folder}	{m.Label}	{m.Purpose}");
     return 0;
 }
 static int CloneTestCharacter(Dictionary<string, string> o)
@@ -141,6 +150,7 @@ static int Usage()
           diff                 --a <data.sav> --b <data.sav>
           make-experiments     --root <characters_v1> --game <Stoneshard folder>
           make-session-b       --root <characters_v1> --game <Stoneshard folder>
+          make-session-c       --root <characters_v1> --game <Stoneshard folder>
           extract-unlocks      --before <data.sav> --after <data.sav> --volume <n> --game <Stoneshard folder> --json <tree-unlocks.json>
           watch                --root <characters_v1> --out <folder>
         """);

@@ -4,6 +4,10 @@
 {
     <Banner Kind="error">@Error</Banner>
 }
+@if (Session.GoldNote is not null)
+{
+    <Banner Kind="warn">@Session.GoldNote</Banner>
+}
 <div class="stat-grid">
     <section class="panel stats">
         <h3>Attributes</h3>

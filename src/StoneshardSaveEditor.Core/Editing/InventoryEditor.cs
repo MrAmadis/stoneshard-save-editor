@@ -31,8 +31,13 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
     /// <summary>Rows known to exist from Velmir's save (items reach row 4); confirmed in-game in Task 12.</summary>
     public const int BagRows = 5;
 
+    /// <summary>A purse is a 5 × 4 grid (owner, session B); gold coins and valuables such as gems share it.</summary>
+    public const int PurseSlots = PurseColumns * PurseRows;
+
+    private const int PurseColumns = 5, PurseRows = 4, CoinsPerStack = 100;
     private const string BagSlot = "N/A";
     private const string Moneybag = "o_inv_moneybag";
+    private const string Coin = "o_inv_gold";
     private const int NameIndex = 0, PropsIndex = 1, F2Index = 2, CellIndex = 3, F4Index = 4, ChargesIndex = 5,
         CountIndex = 6, F7Index = 7, WeaponSetIndex = 8, SlotIndex = 9, EntryLength = 10;
 
@@ -41,7 +46,18 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
 
     public IReadOnlyList<ItemView> Read() => List.Items.Select((node, i) => View(i, (GmArray)node)).ToList();
 
-    public int Gold() => (int)Read().Where(i => i.Name == Moneybag && !i.Equipped).Sum(i => i.Stack ?? 0);
+    /// <summary>
+    /// The gold the character really has: coin stacks inside purses and loose in the bag. A purse's <c>Stack</c> is only
+    /// a cached total, which the game recounts from the coins inside when the purse is opened (session B).
+    /// </summary>
+    public int Gold() => Purses().Sum(i => CoinsIn(EntryAt(i))) + LooseCoins();
+
+    /// <summary>Purses whose cached total differs from the coins inside them; the game shows the coins once opened.</summary>
+    public IReadOnlyList<(int Index, int Claimed, int Coins)> StalePurses() =>
+        Purses()
+            .Select(i => (Index: i, Claimed: (int)((Props(EntryAt(i))["Stack"] as GmNumber)?.Value ?? 0), Coins: CoinsIn(EntryAt(i))))
+            .Where(p => p.Claimed != p.Coins)
+            .ToList();
 
     public (int X, int Y)? FirstFit(int w, int h) => Grid().FirstFit(w, h);
 
@@ -54,15 +70,6 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var entry = EntryAt(index);
         Props(entry).Set("charge", GmNumber.From(value));
         entry.Items[ChargesIndex] = GmNumber.From(value);
-        session.MarkChanged();
-    }
-
-    public void SetStack(int index, int value)
-    {
-        if (ViewAt(index).Stack is null)
-            throw new EditRejectedException("This item doesn't stack");
-        Limits.Check("Amount", value, 0, 10_000_000, whole: true);
-        Props(EntryAt(index)).Set("Stack", GmNumber.From(value));
         session.MarkChanged();
     }
 
@@ -120,33 +127,131 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         return List.Items.Count - 1;
     }
 
-    public void SetGold(int amount, Func<GmArray> newMoneybag)
+    /// <summary>
+    /// Sets the gold carried. Loose coin stacks stay as they are; the rest goes into purses as stacks of 100, filling the
+    /// purses in the bag in order and adding new ones (from <paramref name="newPurse"/>) when they are full. Valuables in a
+    /// purse stay where they are. Nothing changes when the gold doesn't fit.
+    /// </summary>
+    public void SetGold(int amount, Func<GmArray> newPurse, Func<GmArray> newCoin)
     {
         Limits.Check("Gold", amount, 0, 10_000_000, whole: true);
-        var bags = Read().Where(i => i.Name == Moneybag && !i.Equipped).Select(i => i.Index).ToList();
+        var loose = LooseCoins();
+        if (amount < loose)
+            throw new EditRejectedException($"You carry {loose} gold as loose coins; delete some in the Inventory tab to go lower");
 
-        if (amount == 0)
+        var left = amount - loose;
+        var plan = new List<(int Index, int Amount)>();
+        foreach (var i in Purses())
         {
-            foreach (var i in bags.OrderDescending())
-                List.Items.RemoveAt(i);
-            if (bags.Count > 0)
-                session.MarkChanged();
-            return;
+            var take = Math.Min(left, Capacity(EntryAt(i)));
+            plan.Add((i, take));
+            left -= take;
         }
 
-        if (bags.Count == 0)
+        const int fullPurse = PurseSlots * CoinsPerStack;
+        var extra = (left + fullPurse - 1) / fullPurse;
+        var grid = Grid();
+        var (w, h) = shapes.Footprint(Moneybag);
+        for (var k = 0; k < extra; k++)
         {
-            var created = newMoneybag();
-            Props(created).Set("Stack", GmNumber.From(amount));
-            Add(created);
-            return;
+            var spot = grid.FirstFit(w, h)
+                       ?? throw new EditRejectedException($"{amount} gold needs {extra} more purses, but the bag has room for {k}");
+            grid.Occupy(spot.X, spot.Y, w, h);
         }
 
-        Props(EntryAt(bags[0])).Set("Stack", GmNumber.From(amount));
-        foreach (var i in bags.Skip(1).OrderDescending())
-            List.Items.RemoveAt(i);
+        foreach (var (i, take) in plan)
+            Fill(EntryAt(i), take, newCoin);
+        while (left > 0)
+        {
+            var purse = newPurse();
+            Props(purse).Set("lootList", new GmArray());
+            var take = Math.Min(left, fullPurse);
+            Fill(purse, take, newCoin);
+            Add(purse);
+            left -= take;
+        }
         session.MarkChanged();
     }
+
+    /// <summary>Sets the gold inside one purse, as stacks of 100 in its free slots.</summary>
+    public void SetPurseGold(int index, int amount, Func<GmArray> newCoin)
+    {
+        if (ViewAt(index) is not { Name: Moneybag, Equipped: false })
+            throw new EditRejectedException("That isn't a purse");
+        Limits.Check("Gold", amount, 0, 10_000_000, whole: true);
+        Fill(EntryAt(index), amount, newCoin);
+        session.MarkChanged();
+    }
+
+    private IEnumerable<int> Purses() =>
+        List.Items.Select((node, i) => (node, i))
+            .Where(x => x.node is GmArray e && NameOf(e) == Moneybag && InBag(e))
+            .Select(x => x.i);
+
+    private int LooseCoins() =>
+        List.Items.OfType<GmArray>().Where(e => NameOf(e) == Coin && InBag(e)).Sum(CountOf);
+
+    private static int CoinsIn(GmArray purse) => Loot(purse)?.Items.OfType<GmArray>().Where(e => NameOf(e) == Coin).Sum(CountOf) ?? 0;
+
+    private int Capacity(GmArray purse) => FreeCells(purse).Count * CoinsPerStack;
+
+    /// <summary>Replaces a purse's coins with <paramref name="amount"/> gold in stacks of 100, and its cached total.</summary>
+    private void Fill(GmArray purse, int amount, Func<GmArray> newCoin)
+    {
+        var free = FreeCells(purse);
+        var stacks = (amount + CoinsPerStack - 1) / CoinsPerStack;
+        if (stacks > free.Count)
+            throw new EditRejectedException($"A purse holds at most {free.Count * CoinsPerStack} gold");
+
+        var props = Props(purse);
+        if (props["lootList"] is not GmArray loot)
+            props.Set("lootList", loot = new GmArray());
+        loot.Items.RemoveAll(n => n is GmArray e && NameOf(e) == Coin);
+        for (var k = 0; k < stacks; k++)
+        {
+            var coin = newCoin();
+            coin.Items[F2Index] = GmNumber.From(0);
+            coin.Items[CellIndex] = GmNumber.From(free[k]);
+            coin.Items[CountIndex] = GmNumber.From(Math.Min(CoinsPerStack, amount - k * CoinsPerStack));
+            coin.Items[F7Index] = GmNumber.From(0);
+            coin.Items[WeaponSetIndex] = GmNumber.From(0);
+            coin.Items[SlotIndex] = GmString.From(BagSlot);
+            loot.Items.Add(coin);
+        }
+        props.Set("Stack", GmNumber.From(amount));
+    }
+
+    /// <summary>Purse slots not taken by valuables, down each column first as the game places coins (cells 0, 5, 10, 15).</summary>
+    private List<int> FreeCells(GmArray purse)
+    {
+        var taken = new HashSet<int>();
+        foreach (var e in Loot(purse)?.Items.OfType<GmArray>().Where(e => NameOf(e) != Coin) ?? [])
+        {
+            if (e.Items.Count <= CellIndex || e.Items[CellIndex] is not GmNumber { Value: >= 0 } c)
+                continue;
+            var (w, h) = shapes.Footprint(NameOf(e));
+            var (x0, y0) = ((int)c.Value % PurseColumns, (int)c.Value / PurseColumns);
+            for (var x = x0; x < x0 + w; x++)
+            for (var y = y0; y < y0 + h; y++)
+                taken.Add(y * PurseColumns + x);
+        }
+        var free = new List<int>();
+        for (var x = 0; x < PurseColumns; x++)
+        for (var y = 0; y < PurseRows; y++)
+            if (!taken.Contains(y * PurseColumns + x))
+                free.Add(y * PurseColumns + x);
+        return free;
+    }
+
+    private static GmArray? Loot(GmArray purse) => (purse.Items[PropsIndex] as GmObject)?["lootList"] as GmArray;
+
+    private static string NameOf(GmArray entry) => (entry.Items.Count > NameIndex ? entry.Items[NameIndex] as GmString : null)?.Value ?? "";
+
+    private static bool InBag(GmArray entry) =>
+        entry.Items.Count == EntryLength && (entry.Items[SlotIndex] as GmString)?.Value == BagSlot;
+
+    private static int CountOf(GmArray entry) =>
+        entry.Items.Count > CountIndex && entry.Items[CountIndex] is GmNumber { Value: > 0 } n ? (int)n.Value : 0;
 
     private BagGrid Grid()
     {
@@ -165,7 +270,8 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var cell = entry.Items[CellIndex] is GmNumber c ? (int)c.Value : -1;
         var (w, h) = shapes.Footprint(name);
         var isGear = props["Metatype"] is not null;
-        var stack = props["Stack"] is GmNumber s ? s.Value : (double?)null;
+        // A purse's gold is the coins inside it; its own Stack is only a cached total (see Gold()).
+        var stack = name == Moneybag ? CoinsIn(entry) : props["Stack"] is GmNumber s ? s.Value : (double?)null;
         var charge = props["charge"] is GmNumber ch ? ch.Value : 0;
         var max = props["MaxDuration"] is GmNumber m && m.Value > 0 ? m.Value : (double?)null;
         var count = shapes.MaxStack(name) > 0 && entry.Items[CountIndex] is GmNumber { Value: >= 0 } n ? n.Value : (double?)null;

@@ -98,6 +98,27 @@ public class ExperimentsTests
             BagItems(unlock).Select(i => i.Name).Order());
     }
 
+    [Fact]
+    public void Session_C_builds_gold_as_coins_characters()
+    {
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionC(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal(new[] { "Osbrook", "Mannshire" }, made.Select(m => m.Label));
+        Assert.Equal(new[] { 1234.0 }, Purses(Load(root, made[0].Folder)).Select(p => p.Coins));
+        Assert.Equal(new[] { 2000.0, 2000, 500 }, Purses(Load(root, made[1].Folder)).Select(p => p.Coins));
+        Assert.All(Purses(Load(root, made[1].Folder)), p => Assert.Equal(p.Coins, p.Cached));
+    }
+
+    private static IEnumerable<(double Coins, double Cached)> Purses(GmObject root) =>
+        ((GmArray)root["inventoryDataList"]!).Items.Cast<GmArray>()
+        .Where(e => ((GmString)e.Items[0]).Value == "o_inv_moneybag")
+        .Select(e => (GmObject)e.Items[1])
+        .Select(p => (((GmArray)p["lootList"]!).Items.Cast<GmArray>().Sum(c => ((GmNumber)c.Items[6]).Value), ((GmNumber)p["Stack"]!).Value));
+
     private static IEnumerable<string> Books(GmObject root) =>
         ((GmArray)((GmObject)root["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>().Select(b => b.Value);
 

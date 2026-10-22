@@ -59,7 +59,7 @@ public class InventoryEditorTests
         var (_, inv) = Open();
         var moneybag = Item(inv, "o_inv_moneybag");
         Assert.Equal((3, 0), (moneybag.X, moneybag.Y));
-        Assert.Equal(2864, moneybag.Stack);
+        Assert.Equal(0, moneybag.Stack); // the coins inside; its cached 2864 is stale (session B)
         Assert.Null(moneybag.Charges);
         Assert.Equal("s_o_inv_moneybag", moneybag.Sprite);
         var splint = Item(inv, "o_inv_splint");
@@ -86,8 +86,114 @@ public class InventoryEditorTests
         Assert.Equal(75, tools.MaxDurability);
     }
 
+    /// <summary>A gold coin entry as the catalog makes it: a full stack of 100.</summary>
+    private static GmArray NewCoin() => (GmArray)GmJson.Parse(
+        "[\"o_inv_gold\", { \"Material\": \"gold\", \"idName\": \"gold\", \"Duration\": 0.0, \"MaxDuration\": 0.0, \"i_index\": 0.0, \"charge\": 1.0 }, 0.0, -4.0, 0.0, 1.0, 100.0, 0.0, 0.0, \"N/A\"]"u8);
+
+    private static GmArray Purse(SaveSession s, InventoryEditor inv) =>
+        Entry(s, inv.Read().First(i => i.Name == "o_inv_moneybag").Index);
+
+    private static List<(string Name, int Cell, double Count)> Contents(GmArray purse) =>
+        ((GmArray)((GmObject)purse.Items[1])["lootList"]!).Items.Cast<GmArray>()
+        .Select(e => (((GmString)e.Items[0]).Value, (int)((GmNumber)e.Items[3]).Value, ((GmNumber)e.Items[6]).Value))
+        .ToList();
+
+    private static double Cached(GmArray purse) => ((GmNumber)((GmObject)purse.Items[1])["Stack"]!).Value;
+
     [Fact]
-    public void Gold_reads_2864() => Assert.Equal(2864, Open().Inv.Gold());
+    public void Gold_counts_real_coins_not_the_purse_total()
+    {
+        // Velmir's purse says 2864 but holds no coins; the game drops it to 0 when the purse is opened (session B).
+        var (_, inv) = Open();
+        var purse = Item(inv, "o_inv_moneybag");
+
+        Assert.Equal(0, inv.Gold());
+        Assert.Equal(0, purse.Stack);
+        Assert.Equal(new[] { (purse.Index, 2864, 0) }, inv.StalePurses());
+    }
+
+    [Fact]
+    public void SetGold_fills_the_purse_with_coin_stacks()
+    {
+        var (session, inv) = Open();
+
+        inv.SetGold(1234, () => throw new InvalidOperationException("the purse has room"), NewCoin);
+
+        var coins = Contents(Purse(session, inv));
+        Assert.Equal(13, coins.Count);
+        Assert.Equal(1234, coins.Sum(c => c.Count));
+        Assert.All(coins, c => Assert.Equal("o_inv_gold", c.Name));
+        Assert.Equal(new[] { 0, 5, 10, 15, 1 }, coins.Take(5).Select(c => c.Cell)); // down the first column, as the game does
+        Assert.Equal(coins.Count, coins.Select(c => c.Cell).Distinct().Count());
+        Assert.All(coins, c => Assert.InRange(c.Cell, 0, InventoryEditor.PurseSlots - 1));
+        Assert.Equal(1234, Cached(Purse(session, inv)));
+        Assert.Equal(1234, inv.Gold());
+        Assert.Empty(inv.StalePurses());
+    }
+
+    [Fact]
+    public void SetGold_adds_purses_when_one_is_full()
+    {
+        var (session, inv) = Open();
+        var template = (GmArray)Purse(session, inv).DeepClone();
+
+        inv.SetGold(4500, () => (GmArray)template.DeepClone(), NewCoin);
+
+        var purses = inv.Read().Where(i => i.Name == "o_inv_moneybag").ToList();
+        Assert.Equal(new[] { 2000.0, 2000, 500 }, purses.Select(p => p.Stack!.Value));
+        Assert.Equal(4500, inv.Gold());
+        Assert.All(purses, p => Assert.NotNull(p.X));
+    }
+
+    [Fact]
+    public void SetGold_keeps_loose_coins_and_valuables()
+    {
+        var (session, inv) = Open();
+        inv.Add(NewCoin());
+        var loot = (GmArray)((GmObject)Purse(session, inv).Items[1])["lootList"]!;
+        var gem = NewCoin();
+        gem.Items[0] = GmString.From("o_inv_ruby");
+        gem.Items[3] = GmNumber.From(0);
+        loot.Items.Add(gem);
+
+        inv.SetGold(1000, () => throw new InvalidOperationException(), NewCoin);
+
+        var contents = Contents(Purse(session, inv));
+        Assert.Contains(("o_inv_ruby", 0, 100.0), contents);
+        Assert.Equal(900, contents.Where(c => c.Name == "o_inv_gold").Sum(c => c.Count));
+        Assert.DoesNotContain(contents, c => c.Name == "o_inv_gold" && c.Cell == 0);
+        Assert.Equal(900, Cached(Purse(session, inv)));
+        Assert.Equal(1000, inv.Gold());
+        Assert.Throws<EditRejectedException>(() => inv.SetGold(50, () => throw new InvalidOperationException(), NewCoin));
+    }
+
+    [Fact]
+    public void SetGold_without_room_for_purses_changes_nothing()
+    {
+        var (session, inv) = Open();
+        var template = (GmArray)Purse(session, inv).DeepClone();
+        var before = session.ChangeCount;
+
+        var error = Assert.Throws<EditRejectedException>(() => inv.SetGold(99_999, () => (GmArray)template.DeepClone(), NewCoin));
+
+        Assert.Contains("purse", error.Message);
+        Assert.Equal(before, session.ChangeCount);
+        Assert.Empty(Contents(Purse(session, inv)));
+    }
+
+    [Fact]
+    public void SetPurseGold_caps_at_twenty_stacks()
+    {
+        var (session, inv) = Open();
+        var index = Item(inv, "o_inv_moneybag").Index;
+
+        Assert.Throws<EditRejectedException>(() => inv.SetPurseGold(index, 2001, NewCoin));
+        inv.SetPurseGold(index, 2000, NewCoin);
+
+        Assert.Equal(20, Contents(Purse(session, inv)).Count);
+        Assert.Equal(2000, Item(inv, "o_inv_moneybag").Stack);
+        Assert.Throws<EditRejectedException>(() => inv.SetPurseGold(Item(inv, "o_inv_cheese").Index, 10, NewCoin));
+    }
 
     [Fact]
     public void SetCharges_updates_props_and_mirror()
@@ -114,15 +220,6 @@ public class InventoryEditorTests
 
         Assert.Throws<EditRejectedException>(() => inv.SetDurability(helmet.Index, 106, 105));
         Assert.Throws<EditRejectedException>(() => inv.SetDurability(Item(inv, "o_inv_salve", 5, 1).Index, 1, 1));
-    }
-
-    [Fact]
-    public void SetStack_needs_a_stack()
-    {
-        var (_, inv) = Open();
-        inv.SetStack(Item(inv, "o_inv_moneybag").Index, 10);
-        Assert.Equal(10, Item(inv, "o_inv_moneybag").Stack);
-        Assert.Throws<EditRejectedException>(() => inv.SetStack(Item(inv, "o_inv_cheese").Index, 3));
     }
 
     [Fact]
@@ -234,22 +331,19 @@ public class InventoryEditorTests
     }
 
     [Fact]
-    public void SetGold_updates_creates_and_deletes()
+    public void SetGold_creates_a_purse_and_zero_empties_it()
     {
         var (session, inv) = Open();
-        var moneybagTemplate = (GmArray)Entry(session, Item(inv, "o_inv_moneybag").Index).DeepClone();
-
-        inv.SetGold(99999, () => throw new InvalidOperationException("should reuse the existing bag"));
-        Assert.Equal("99999.0", ((GmNumber)((GmObject)Entry(session, Item(inv, "o_inv_moneybag").Index).Items[1])["Stack"]!).Raw);
-
+        var template = (GmArray)Purse(session, inv).DeepClone();
         inv.Delete(Item(inv, "o_inv_moneybag").Index);
-        inv.SetGold(50, () => (GmArray)moneybagTemplate.DeepClone());
+
+        inv.SetGold(50, () => (GmArray)template.DeepClone(), NewCoin);
         var created = Item(inv, "o_inv_moneybag");
         Assert.Equal((3, 0, 50.0), (created.X!.Value, created.Y!.Value, created.Stack!.Value));
         Assert.Equal(50, inv.Gold());
 
-        inv.SetGold(0, () => throw new InvalidOperationException());
-        Assert.DoesNotContain(inv.Read(), i => i.Name == "o_inv_moneybag");
+        inv.SetGold(0, () => throw new InvalidOperationException(), NewCoin);
+        Assert.Empty(Contents(Purse(session, inv)));
         Assert.Equal(0, inv.Gold());
     }
 
@@ -263,7 +357,7 @@ public class InventoryEditorTests
         Assert.Throws<EditRejectedException>(() => inv.SetCharges(salve, 0));
         Assert.Throws<EditRejectedException>(() => inv.SetCharges(salve, -1));
         Assert.Throws<EditRejectedException>(() => inv.SetCharges(salve, 100));
-        Assert.Throws<EditRejectedException>(() => inv.SetGold(-5, () => throw new InvalidOperationException()));
+        Assert.Throws<EditRejectedException>(() => inv.SetGold(-5, () => throw new InvalidOperationException(), NewCoin));
         Assert.Throws<EditRejectedException>(() => inv.SetDurability(helmet, double.NaN, 105));
         Assert.Throws<EditRejectedException>(() => inv.SetDurability(helmet, 10, 10.5));
         Assert.Throws<EditRejectedException>(() => inv.Delete(999));

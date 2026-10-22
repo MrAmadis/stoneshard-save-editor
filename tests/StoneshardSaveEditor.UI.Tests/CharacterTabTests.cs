@@ -21,7 +21,8 @@ public class CharacterTabTests
         using var _ctx = ctx;
 
         Assert.Equal("13", cut.Find("[data-field='Strength'] input").GetAttribute("value"));
-        Assert.Equal("2864", cut.Find("[data-field='Gold'] input").GetAttribute("value"));
+        Assert.Equal("0", cut.Find("[data-field='Gold'] input").GetAttribute("value"));
+        Assert.Contains("The purse says 2864 gold but holds 0 in coins", cut.Find(".banner-warn").TextContent);
         Assert.Contains("The game caps these at your maximum", cut.Markup);
         Assert.Contains("Changing these can make the game level you up when the save loads", cut.Markup);
     }
@@ -61,6 +62,8 @@ public class CharacterTabTests
         cut.Find("[data-field='Gold'] input").Change("3000");
 
         Assert.Equal(3000, h.Editor.Current.Gold);
+        Assert.Null(h.Editor.Current.GoldNote);
+        Assert.Equal(2, h.Editor.Current.Items.Count(i => i.Name == "o_inv_moneybag")); // a purse holds 2,000
     }
 
     [Fact]

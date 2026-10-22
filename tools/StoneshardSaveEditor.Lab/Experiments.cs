@@ -52,6 +52,21 @@ public static class Experiments
         return batch.Results;
     }
 
+    /// <summary>Test characters for in-game session C: gold written as coin stacks inside purses (after session B).</summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionC(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook", "C1: Velmir's purse rewritten as 1,234 gold in coins (13 stacks): check the total, open the purse, check it again",
+            s => SetGold(s, game, 1234));
+        batch.Make("Mannshire", "C2: 4,500 gold as three purses (2,000 + 2,000 + 500): check the total, open each purse, check it again",
+            s => SetGold(s, game, 4500));
+        return batch.Results;
+    }
+
+    private static void SetGold(SaveSession s, GameServices game, int amount) =>
+        new InventoryEditor(s, game.Shapes).SetGold(amount,
+            () => game.Catalog.CreateEntry("o_inv_moneybag", s.Root), () => game.Catalog.CreateEntry("o_inv_gold", s.Root));
+
     /// <summary>Clones Velmir's exit save once per experiment, applies it and saves the clone, re-signed.</summary>
     private sealed class Batch
     {
@@ -99,7 +114,11 @@ public static class Experiments
         ((GmObject)s.Root["characterDataMap"]!).Set("Sanity", GmNumber.From(150));
         s.MarkChanged();
         new ReputationEditor(s).Set("32_10", 9000);
-        new InventoryEditor(s, game.Shapes).SetGold(99_999, () => game.Catalog.CreateEntry("o_inv_moneybag", s.Root));
+        // As tested in session A: only the purse's cached total, which the game recounts from the coins when the purse
+        // is opened (session B). The editor now writes coins (InventoryEditor.SetGold).
+        var purse = new InventoryEditor(s, game.Shapes).Read().First(i => i.Name == "o_inv_moneybag").Index;
+        ((GmObject)((GmArray)((GmArray)s.Root["inventoryDataList"]!).Items[purse]).Items[1]).Set("Stack", GmNumber.From(99_999));
+        s.MarkChanged();
     }
 
     private static void Mannshire(SaveSession s, GameServices game)

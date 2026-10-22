@@ -4,6 +4,10 @@
 {
     <Banner Kind="error">@Error</Banner>
 }
+@if (Session.GoldNote is not null)
+{
+    <Banner Kind="warn">@Session.GoldNote</Banner>
+}
 <div class="inventory">
     <section class="equipment">
         <h3>Equipped</h3>
@@ -62,11 +66,19 @@
             </div>
             @if (sel.Stack is { } stack)
             {
-                var label = sel.Name == Moneybag ? "Gold" : "Amount";
-                <div class="field" data-field="@label">
-                    <span>@label</span>
-                    <NumberField Value="stack" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetStack(sel.Index, (int)v))" />
-                </div>
+                @if (sel.Name == Moneybag)
+                {
+                    <div class="field" data-field="Gold">
+                        <span>Gold</span>
+                        <NumberField Value="stack" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetPurseGold(sel.Index, (int)v))" />
+                    </div>
+                    <p class="hint">Up to 2,000 per purse, as stacks of 100; gems and other valuables in it stay.</p>
+                }
+                else
+                {
+                    @* Containers (quivers, sacks) cache the total of what's inside; the contents themselves aren't editable here. *@
+                    <div class="field" data-field="Holds"><span>Holds</span><span>@stack.ToString("0.##", CultureInfo.InvariantCulture)</span></div>
+                }
             }
             @if (sel.Count is { } count)
             {

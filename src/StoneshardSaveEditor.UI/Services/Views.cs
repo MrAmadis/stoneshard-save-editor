@@ -34,6 +34,7 @@ public sealed record SessionView(
     bool GameFound,
     IReadOnlyDictionary<CharacterField, double> Character,
     int Gold,
+    string? GoldNote,
     IReadOnlyList<ItemView> Items,
     int BagRows,
     IReadOnlyList<SkillTreeView> Trees,

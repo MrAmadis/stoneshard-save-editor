@@ -56,7 +56,9 @@ public class EditorServiceTests
         var h = Start();
         var session = h.Editor.Open("character_2", "exitsave_1");
         Assert.Equal(13, session.Character[CharacterField.Strength]);
-        Assert.Equal(2864, session.Gold);
+        Assert.Equal(0, session.Gold); // real coins; the purse's cached 2864 is stale (session B)
+        Assert.Equal("The purse says 2864 gold but holds 0 in coins. The game shows 0 once the purse is opened; set the gold here to put real coins in it.",
+            session.GoldNote);
         Assert.Equal(5, session.BagRows);
         Assert.Equal(33, session.Items.Count);
         Assert.Equal(5, session.Reputation.Count);

@@ -19,7 +19,7 @@ public static class InventoryLayout
     /// <summary>The number drawn on an item, as in the game: coins, stack size, or uses left when more than one.</summary>
     public static string? Badge(ItemView item)
     {
-        var value = item.Stack ?? item.Count ?? (item.Charges > 1 ? item.Charges : null);
+        var value = (item.Stack > 0 ? item.Stack : null) ?? item.Count ?? (item.Charges > 1 ? item.Charges : null);
         return value?.ToString("0.##", CultureInfo.InvariantCulture);
     }
 }
