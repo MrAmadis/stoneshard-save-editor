@@ -259,6 +259,61 @@ img.px, img.preview { image-rendering: pixelated; }
 .catalog-item:disabled { opacity: .45; cursor: not-allowed; }
 .catalog-item .thumb { width: 54px; height: 54px; flex: none; display: flex; align-items: center; justify-content: center; }
 
+/* Skills tab */
+.skills-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 8px 12px; margin-bottom: 12px; }
+.skills-bar .field { margin: 0; gap: 8px; }
+.skills-bar .number-field input { width: 60px; }
+.rules-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-dim); }
+.rules-toggle:has(input:disabled) { color: var(--muted); }
+.skills { display: flex; gap: 14px; align-items: flex-start; }
+.tree-list { width: 210px; flex: none; display: flex; flex-direction: column; }
+.tree-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 9px;
+    background: none;
+    border: 0;
+    border-left: 3px solid transparent;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+.tree-item:hover { background: rgba(226, 178, 74, .06); }
+.tree-item.on { background: #33291a; border-left-color: var(--accent); color: #fff; }
+.tree-item .n { font: 11px system-ui, sans-serif; color: #9ccc6b; padding-top: 3px; }
+.tree-item.closed { color: #7a6c55; }
+.tree-item.closed .n { color: var(--danger-border); }
+.tree-view { flex: 1; min-width: 460px; padding: 14px 16px; }
+.tree-view .unlock-tree { margin-bottom: 12px; }
+.row-label { font: 11px system-ui, sans-serif; color: #8c7a5c; margin-top: 6px; }
+.skill-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0 16px; }
+.skill-grid { display: grid; grid-auto-columns: 82px; gap: 14px; margin: 6px 0 16px; }
+.skill {
+    width: 82px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--text-dim);
+    font: 11px/1.15 system-ui, sans-serif;
+    text-align: center;
+    cursor: pointer;
+}
+.skill:disabled { cursor: default; }
+.skill img { display: block; margin: 0 auto 4px; border: 2px solid var(--border); }
+.skill.learned img { border-color: var(--accent); box-shadow: 0 0 8px rgba(226, 178, 74, .55); }
+.skill.available img { border-color: var(--available); }
+.skill.locked img { filter: grayscale(1) brightness(.45); }
+.skill.locked { color: #6f634f; }
+.skill:not(:disabled):hover img { outline: 1px solid var(--text-dim); }
+.legend { display: flex; gap: 14px; font: 11px system-ui, sans-serif; color: var(--muted); margin-top: 4px; }
+.legend b { display: inline-block; width: 10px; height: 10px; border: 2px solid; vertical-align: middle; margin-right: 4px; }
+.legend b.learned { border-color: var(--accent); }
+.legend b.available { border-color: var(--available); }
+.legend b.locked { border-color: var(--border); background: #333; }
+
 /* Number fields */
 .number-field { display: inline-flex; flex-direction: column; align-items: flex-end; }
 .number-field input {
