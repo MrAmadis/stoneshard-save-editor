@@ -16,7 +16,7 @@ public interface IItemShapeProvider
 public sealed record ItemView(
     int Index, string Name, bool Equipped, string Slot,
     int? X, int? Y, int W, int H, int? WeaponSet,
-    double? Charges, double? Stack, double? Count, double? Durability, double? MaxDurability,
+    double? Charges, double? MaxCharges, double? Stack, double? Count, double? Durability, double? MaxDurability,
     bool IsGear, string Sprite);
 
 /// <summary>
@@ -40,6 +40,11 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
     private const string Coin = "o_inv_gold";
     private const int NameIndex = 0, PropsIndex = 1, F2Index = 2, CellIndex = 3, F4Index = 4, ChargesIndex = 5,
         CountIndex = 6, F7Index = 7, WeaponSetIndex = 8, SlotIndex = 9, EntryLength = 10;
+
+    private Dictionary<string, double>? _maxCharges;
+
+    /// <summary>The most charges seen for each item anywhere in the save, worked out once per editor.</summary>
+    private Dictionary<string, double> MaxChargesSeen => _maxCharges ??= SaveItems.MaxCharges(session.Root);
 
     private GmArray List => session.Root["inventoryDataList"] as GmArray
                             ?? throw new EditRejectedException("This save has no inventory");
@@ -66,7 +71,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var view = ViewAt(index);
         if (view.Charges is null)
             throw new EditRejectedException("This item has no charges");
-        Limits.Check("Charges", value, 1, 99, whole: true);
+        Limits.Check("Charges", value, 1, view.MaxCharges ?? view.Charges.Value, whole: true);
         var entry = EntryAt(index);
         Props(entry).Set("charge", GmNumber.From(value));
         entry.Items[ChargesIndex] = GmNumber.From(value);
@@ -275,6 +280,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var charge = props["charge"] is GmNumber ch ? ch.Value : 0;
         var max = props["MaxDuration"] is GmNumber m && m.Value > 0 ? m.Value : (double?)null;
         var count = shapes.MaxStack(name) > 0 && entry.Items[CountIndex] is GmNumber { Value: >= 0 } n ? n.Value : (double?)null;
+        var charges = !isGear && stack is null && count is null && charge >= 1 ? charge : (double?)null;
 
         return new ItemView(
             index, name, equipped, slot,
@@ -282,7 +288,8 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
             equipped || cell < 0 ? null : cell / Columns,
             w, h,
             equipped && entry.Items[WeaponSetIndex] is GmNumber set ? (int)set.Value : null,
-            !isGear && stack is null && count is null && charge >= 1 ? charge : null,
+            charges,
+            charges is null ? null : Math.Max(charges.Value, MaxChargesSeen.GetValueOrDefault(name)),
             stack,
             count,
             max is null ? null : (props["Duration"] as GmNumber)?.Value ?? 0,

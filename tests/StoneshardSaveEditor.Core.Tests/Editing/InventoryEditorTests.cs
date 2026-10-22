@@ -196,6 +196,21 @@ public class InventoryEditorTests
     }
 
     [Fact]
+    public void Charges_are_capped_at_the_most_seen_for_the_item()
+    {
+        // The game keeps the real maximum in code; full copies in traders' stock and loot show it (salve 3, owner).
+        var (_, inv) = Open();
+        var salve = Item(inv, "o_inv_salve", 5, 1);
+        Assert.Equal(3, salve.MaxCharges);
+        Assert.Equal(6, Item(inv, "o_inv_wineskin").MaxCharges);
+        Assert.Null(Item(inv, "Flat Kettle Helmet").MaxCharges);
+
+        var error = Assert.Throws<EditRejectedException>(() => inv.SetCharges(salve.Index, 4));
+        Assert.Equal("Charges must be a whole number between 1 and 3", error.Message);
+        inv.SetCharges(salve.Index, 3);
+    }
+
+    [Fact]
     public void SetCharges_updates_props_and_mirror()
     {
         var (session, inv) = Open();

@@ -91,8 +91,9 @@
             {
                 <div class="field" data-field="Charges">
                     <span>Charges</span>
-                    <NumberField Value="charges" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetCharges(sel.Index, (int)v))" />
+                    <NumberField Value="charges" Whole="true" Min="1" Max="sel.MaxCharges ?? charges" OnCommit="v => Edit(() => EditorService.SetCharges(sel.Index, (int)v))" />
                 </div>
+                <p class="hint">Up to @((sel.MaxCharges ?? charges).ToString("0", CultureInfo.InvariantCulture)), the most any copy has in this save.</p>
             }
             @if (sel.MaxDurability is > 0 and var max)
             {

@@ -49,6 +49,9 @@ public class InventoryTabTests
         var salve = h.Editor.Current.Items.First(i => i.Name == "o_inv_salve" && i.Charges == 3);
         cut.Find($".bag [data-index='{salve.Index}']").Click();
         Assert.Equal("3", cut.Find(".item-detail [data-field='Charges'] input").GetAttribute("value"));
+        cut.Find(".item-detail [data-field='Charges'] input").Change("6");
+        Assert.Contains("between 1 and 3", cut.Find(".item-detail [data-field='Charges'] .field-error").TextContent);
+        Assert.Equal(3, h.Editor.Current.Items[salve.Index].Charges);
 
         cut.Find(".doll [data-item='o_inv_leafshaped_bolts']").Click();
         cut.Find(".item-detail [data-field='Count'] input").Change("5");

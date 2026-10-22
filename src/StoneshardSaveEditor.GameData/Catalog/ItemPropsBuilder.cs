@@ -1,4 +1,5 @@
 using System.Globalization;
+using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.Core.Json;
 
 namespace StoneshardSaveEditor.GameData;
@@ -140,34 +141,10 @@ public static class ItemPropsBuilder
 
     /// <summary>The highest charge count any copy of <paramref name="key"/> in the save has (merchant stock is usually full).</summary>
     internal static double? MaxObservedCharge(string key, GmObject saveRoot) =>
-        Instances(saveRoot)
-            .Where(i => i.Name == key && i.Props["charge"] is GmNumber { Value: >= 1 })
-            .Select(i => ((GmNumber)i.Props["charge"]!).Value)
-            .DefaultIfEmpty()
-            .Max() is var max and > 0 ? max : null;
+        SaveItems.MaxCharges(saveRoot).TryGetValue(key, out var max) ? max : null;
 
     /// <summary>Every <c>[name, props, …]</c> item entry anywhere in the save: inventory, stash, merchants, containers.</summary>
-    internal static IEnumerable<(string Name, GmObject Props)> Instances(GmNode node)
-    {
-        var stack = new Stack<GmNode>();
-        stack.Push(node);
-        while (stack.Count > 0)
-        {
-            switch (stack.Pop())
-            {
-                case GmArray a:
-                    if (a.Items.Count >= 2 && a.Items[0] is GmString s && a.Items[1] is GmObject p)
-                        yield return (s.Value, p);
-                    for (var i = a.Items.Count - 1; i >= 0; i--)
-                        stack.Push(a.Items[i]);
-                    break;
-                case GmObject o:
-                    for (var i = o.Entries.Count - 1; i >= 0; i--)
-                        stack.Push(o.Entries[i].Value);
-                    break;
-            }
-        }
-    }
+    internal static IEnumerable<(string Name, GmObject Props)> Instances(GmNode node) => SaveItems.Instances(node);
 
     private static bool TryNumber(string cell, out double value) =>
         double.TryParse(cell, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
