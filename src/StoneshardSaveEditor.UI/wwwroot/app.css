@@ -140,6 +140,37 @@ img.px, img.preview { image-rendering: pixelated; }
 .tab-body { padding-top: 14px; }
 .placeholder { padding: 40px 0; text-align: center; }
 
+/* Character and Reputation tabs */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.stats { padding: 12px 14px; }
+.field {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 6px 0;
+}
+.field > span:first-child { padding-top: 3px; }
+.stepper { display: inline-flex; align-items: flex-start; gap: 4px; }
+.btn.step { width: 26px; padding: 3px 0; text-align: center; }
+.hint { margin: 2px 0 10px; font-size: 12px; color: var(--muted); font-style: italic; }
+.reputation { max-width: 720px; }
+.rep { display: flex; align-items: flex-start; gap: 12px; margin: 8px 0; }
+.rep .nm { width: 150px; padding-top: 3px; }
+.rep .track {
+    flex: 1;
+    height: 10px;
+    margin-top: 8px;
+    background: #14110f;
+    border: 1px solid var(--border);
+}
+.rep .track i { display: block; height: 100%; background: var(--gold-border); }
+
 /* Number fields */
 .number-field { display: inline-flex; flex-direction: column; align-items: flex-end; }
 .number-field input {

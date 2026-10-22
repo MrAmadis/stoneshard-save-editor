@@ -1,0 +1,30 @@
+@inherits EditorTab
+
+@if (Error is not null)
+{
+    <Banner Kind="error">@Error</Banner>
+}
+<section class="panel stats reputation">
+    <h3>Reputation</h3>
+    @if (Session.Reputation.Count == 0)
+    {
+        <p class="muted">This save has no settlement reputation yet.</p>
+    }
+    @foreach (var r in Session.Reputation.OrderByDescending(r => r.Value))
+    {
+        <div class="rep" @key="r.LocationKey" data-location="@r.LocationKey">
+            <span class="nm">@r.Name</span>
+            <span class="track"><i style="width:@Width(r.Value)%"></i></span>
+            <NumberField Value="r.Value" Whole="true" Min="0" OnCommit="v => Edit(() => EditorService.SetReputation(r.LocationKey, v))" />
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>Bars are scaled to the highest reputation, or to 5000 while every value is below it.</summary>
+    private string Width(double value)
+    {
+        var scale = Math.Max(5000, Session.Reputation.Max(r => r.Value));
+        return (Math.Clamp(value / scale, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture);
+    }
+}

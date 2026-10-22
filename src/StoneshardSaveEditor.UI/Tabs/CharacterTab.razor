@@ -1,0 +1,85 @@
+@inherits EditorTab
+
+@if (Error is not null)
+{
+    <Banner Kind="error">@Error</Banner>
+}
+<div class="stat-grid">
+    <section class="panel stats">
+        <h3>Attributes</h3>
+        @foreach (var (field, label) in Attributes)
+        {
+            @if (Session.Character.TryGetValue(field, out var value))
+            {
+                <div class="field" data-field="@field">
+                    <span>@label</span>
+                    <span class="stepper">
+                        <button class="btn step minus" title="@($"{label} − 1")" @onclick="() => Set(field, value - 1)">−</button>
+                        <NumberField Value="value" Whole="true" OnCommit="v => Set(field, v)" />
+                        <button class="btn step plus" title="@($"{label} + 1")" @onclick="() => Set(field, value + 1)">+</button>
+                    </span>
+                </div>
+            }
+        }
+    </section>
+
+    <section class="panel stats">
+        <h3>Progress</h3>
+        @Row(CharacterField.Level, "Level", whole: true)
+        @Row(CharacterField.Experience, "Experience", whole: true)
+        <p class="hint">Changing these can make the game level you up when the save loads</p>
+        @Row(CharacterField.StatPoints, "Stat points", whole: true)
+        @Row(CharacterField.AbilityPoints, "Ability points", whole: true)
+        <div class="field" data-field="Gold">
+            <span>Gold</span>
+            <NumberField Value="Session.Gold" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetGold((int)v))" />
+        </div>
+    </section>
+
+    <section class="panel stats">
+        <h3>Condition</h3>
+        @Row(CharacterField.Health, "Health", whole: false)
+        @Row(CharacterField.Energy, "Energy", whole: false)
+        <p class="hint">The game caps these at your maximum</p>
+        @foreach (var (field, label) in Needs)
+        {
+            @Row(field, label, whole: false)
+        }
+    </section>
+</div>
+
+@code {
+    private static readonly (CharacterField, string)[] Attributes =
+    [
+        (CharacterField.Strength, "Strength"),
+        (CharacterField.Agility, "Agility"),
+        (CharacterField.Perception, "Perception"),
+        (CharacterField.Vitality, "Vitality"),
+        (CharacterField.Willpower, "Willpower"),
+    ];
+
+    private static readonly (CharacterField, string)[] Needs =
+    [
+        (CharacterField.Sanity, "Sanity"),
+        (CharacterField.Morale, "Morale"),
+        (CharacterField.Hunger, "Hunger"),
+        (CharacterField.Thirst, "Thirst"),
+        (CharacterField.Fatigue, "Fatigue"),
+        (CharacterField.Intoxication, "Intoxication"),
+        (CharacterField.Pain, "Pain"),
+    ];
+
+    /// <summary>A labelled number field, or nothing when the save has no such value.</summary>
+    private RenderFragment Row(CharacterField field, string label, bool whole) =>
+        @<text>
+            @if (Session.Character.TryGetValue(field, out var value))
+            {
+                <div class="field" data-field="@field">
+                    <span>@label</span>
+                    <NumberField Value="value" Whole="whole" OnCommit="v => Set(field, v)" />
+                </div>
+            }
+        </text>;
+
+    private void Set(CharacterField field, double value) => Edit(() => EditorService.SetCharacter(field, value));
+}

@@ -64,6 +64,12 @@
     <main class="tab-body">
         @switch (_tab)
         {
+            case "Character":
+                <CharacterTab Session="s" />
+                break;
+            case "Reputation":
+                <ReputationTab Session="s" />
+                break;
             default:
                 <p class="muted placeholder">The @_tab tab is coming in the next build step.</p>
                 break;
