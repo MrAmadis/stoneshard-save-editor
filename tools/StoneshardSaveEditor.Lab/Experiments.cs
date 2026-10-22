@@ -113,7 +113,8 @@ public static class Experiments
         // Deliberately outside the editor's limits, to see whether the game clamps it.
         ((GmObject)s.Root["characterDataMap"]!).Set("Sanity", GmNumber.From(150));
         s.MarkChanged();
-        new ReputationEditor(s).Set("32_10", 9000);
+        // As tested in session A, above the game's maximum of 6000 that the editor now enforces.
+        ((GmObject)((GmObject)((GmObject)s.Root["globalmapDataMap"]!)["locationsDataMap"]!)["32_10"]!).Set("reputation", GmNumber.From(9000));
         // As tested in session A: only the purse's cached total, which the game recounts from the coins when the purse
         // is opened (session B). The editor now writes coins (InventoryEditor.SetGold).
         var purse = new InventoryEditor(s, game.Shapes).Read().First(i => i.Name == "o_inv_moneybag").Index;

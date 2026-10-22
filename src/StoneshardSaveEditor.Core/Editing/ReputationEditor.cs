@@ -13,7 +13,8 @@ public sealed record SettlementReputation(string VillageKey, string LocationKey,
 /// </summary>
 public sealed class ReputationEditor(SaveSession session)
 {
-    private const double Max = 100_000;
+    /// <summary>The game's highest reputation (owner, final acceptance).</summary>
+    public const double Max = 6000;
 
     public IReadOnlyList<SettlementReputation> Read()
     {

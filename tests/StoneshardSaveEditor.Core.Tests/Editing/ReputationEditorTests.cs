@@ -29,17 +29,27 @@ public class ReputationEditorTests
     public void Reputation_set_updates_only_value()
     {
         var session = Sessions.OpenVelmir();
-        new ReputationEditor(session).Set("32_10", 9000);
+        new ReputationEditor(session).Set("32_10", 5500);
 
         var osbrook = Location(session.Root, "32_10");
-        Assert.Equal("9000.0", ((GmNumber)osbrook["reputation"]!).Raw);
+        Assert.Equal("5500.0", ((GmNumber)osbrook["reputation"]!).Raw);
         Assert.Equal(7, ((GmArray)osbrook["reputationLogList"]!).Items.Count);
         Assert.Equal(1, session.ChangeCount);
     }
 
+    [Fact]
+    public void Reputation_goes_up_to_the_games_maximum()
+    {
+        var session = Sessions.OpenVelmir();
+
+        new ReputationEditor(session).Set("32_10", 6000);
+
+        Assert.Equal("6000.0", ((GmNumber)Location(session.Root, "32_10")["reputation"]!).Raw);
+    }
+
     [Theory]
     [InlineData("99_99", 10)]
-    [InlineData("32_10", 100001)]
+    [InlineData("32_10", 6001)] // the game's maximum is 6000 (owner, final acceptance)
     [InlineData("32_10", -1)]
     [InlineData("32_10", 10.5)]
     public void Reputation_rejects_unknown_location_and_out_of_range(string location, double value)

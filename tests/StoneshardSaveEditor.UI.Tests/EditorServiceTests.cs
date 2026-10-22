@@ -77,7 +77,7 @@ public class EditorServiceTests
     {
         var h = Start();
         h.Editor.Open("character_2", "exitsave_1");
-        h.Editor.SetReputation("32_10", 9000);
+        h.Editor.SetReputation("32_10", 5500);
 
         var reloaded = h.Editor.Reload();
 

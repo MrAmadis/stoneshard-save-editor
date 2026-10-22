@@ -76,6 +76,7 @@ public class CharacterTabTests
 
         var first = cut.FindAll(".rep")[0];
         Assert.Equal("Osbrook", first.QuerySelector(".nm")!.TextContent);
+        Assert.Contains("width:71%", first.QuerySelector(".track i")!.GetAttribute("style")); // 4258 of the game's 6000
         Assert.Equal("4258", first.QuerySelector("input")!.GetAttribute("value"));
 
         first.QuerySelector("input")!.Change("4300");
