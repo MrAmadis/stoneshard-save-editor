@@ -1,0 +1,101 @@
+<style>
+  .ss { background:#1b1815; color:#e8dcc4; font-family: Georgia, serif; border-radius:8px; padding:14px; }
+  .ss img { image-rendering: pixelated; }
+  .ss h4 { margin:0 0 8px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:#b9a67f; }
+  .ss .btn { background:#3a3127; border:1px solid #6b5a3f; color:#e8dcc4; padding:4px 10px; border-radius:4px; font-size:12px; display:inline-block; }
+  .ss .btn.gold { background:#6b5122; border-color:#c9a14a; }
+  .ss .btn.red { background:#5a2620; border-color:#a5463b; }
+  .topbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:8px 10px; background:#24201b; border:1px solid #4a3f31; margin-bottom:12px; font-size:13px; }
+  .topbar input { width:44px; background:#14110f; border:1px solid #6b5a3f; color:#f3e3bd; padding:2px 6px; }
+  .wrap { display:flex; gap:14px; flex-wrap:wrap; }
+  .trees { width:190px; font-size:13px; }
+  .trees div { display:flex; justify-content:space-between; padding:4px 8px; border-left:3px solid transparent; color:#cdbd9b; }
+  .trees div.on { background:#33291a; border-left-color:#e2b24a; color:#fff; }
+  .trees div .n { font:11px sans-serif; color:#9ccc6b; }
+  .trees div.locked { color:#7a6c55; }
+  .trees div.locked .n { color:#a5463b; }
+  .trees .grp { font:10px sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#8c7a5c; padding:8px 8px 2px; display:block; border:none; }
+  .tree { flex:1; min-width:440px; background:#24201b; border:1px solid #4a3f31; padding:14px; position:relative; }
+  .sk-row { display:flex; gap:22px; margin:6px 0 18px; }
+  .sk { position:relative; width:54px; text-align:center; font:10px/1.15 sans-serif; color:#cdbd9b; }
+  .sk img { width:50px; height:48px; display:block; margin:0 auto 3px; border:2px solid #4a3f31; }
+  .sk.learned img { border-color:#e2b24a; box-shadow:0 0 8px rgba(226,178,74,.55); }
+  .sk.avail img { border-color:#7a8f5a; }
+  .sk.lockd img { filter: grayscale(1) brightness(.45); }
+  .sk.lockd { color:#6f634f; }
+  .legend { font:11px sans-serif; color:#a8987a; display:flex; gap:14px; margin-top:4px; }
+  .legend b { display:inline-block; width:10px; height:10px; border:2px solid; vertical-align:middle; margin-right:4px; }
+  .pop { position:absolute; left:262px; top:58px; width:200px; background:#14110f; border:1px solid #c9a14a; padding:8px 10px; font:12px/1.35 sans-serif; z-index:2; }
+  .lockpanel { flex:1; min-width:300px; background:#24201b; border:1px solid #4a3f31; padding:14px; }
+  .lockpanel .sk-row { opacity:.9 }
+</style>
+
+<h2>Skills: respec, pick skills, unlock trees</h2>
+<p class="subtitle">Real skill icons from your game. Tree arrangement is approximate; the real build will mirror the game's layout. React in the terminal.</p>
+
+<div class="ss">
+  <div class="topbar">
+    <span>Ability points <input value="0"></span>
+    <span>Stat points <input value="0"></span>
+    <span class="btn red">Respec all: unlearn everything &amp; refund points</span>
+    <span class="btn">Refund this tree</span>
+    <span style="margin-left:auto;font:12px sans-serif;color:#a8987a">☑ Follow game rules (prerequisites, point cost)</span>
+  </div>
+
+  <div class="wrap">
+    <div class="trees">
+      <span class="grp">Weapons</span>
+      <div><span>Swords</span><span class="n"></span></div>
+      <div class="on"><span>Axes</span><span class="n">3 learned</span></div>
+      <div><span>Maces</span><span class="n"></span></div>
+      <div><span>Daggers</span><span class="n"></span></div>
+      <div><span>Spears</span><span class="n"></span></div>
+      <div><span>Archery</span><span class="n">1 learned</span></div>
+      <div><span>Shields</span><span class="n"></span></div>
+      <span class="grp">Utility</span>
+      <div><span>Warfare</span><span class="n">2 learned</span></div>
+      <div><span>Survival</span><span class="n">1 learned</span></div>
+      <div><span>Athletics</span><span class="n"></span></div>
+      <span class="grp">Magic</span>
+      <div class="locked"><span>Pyromancy</span><span class="n">🔒 locked</span></div>
+      <div class="locked"><span>Electromancy</span><span class="n">🔒 locked</span></div>
+      <div class="locked"><span>Geomancy</span><span class="n">🔒 locked</span></div>
+    </div>
+
+    <div class="tree">
+      <h4>Axes</h4>
+      <div style="font:11px sans-serif;color:#8c7a5c">Abilities</div>
+      <div class="sk-row">
+        <div class="sk learned"><img src="/files/o_skill_wide_cut_ico.png">Wide Cut</div>
+        <div class="sk learned"><img src="/files/o_skill_dismember_ico.png">Dismember</div>
+        <div class="sk avail"><img src="/files/o_skill_killing_swing_ico.png">Killing Swing</div>
+        <div class="sk lockd"><img src="/files/o_skill_rampage_ico.png">Rampage</div>
+        <div class="sk lockd"><img src="/files/o_skill_reign_in_blood_ico.png">Reign in Blood</div>
+      </div>
+      <div style="font:11px sans-serif;color:#8c7a5c">Passives</div>
+      <div class="sk-row">
+        <div class="sk learned"><img src="/files/o_pass_skill_shieldbreaker.png">Shield&shy;breaker</div>
+        <div class="sk avail"><img src="/files/o_pass_skill_fatal_hit.png">Fatal Hit</div>
+        <div class="sk lockd"><img src="/files/o_pass_skill_weapon_of_execution.png">Weapon of Execution</div>
+        <div class="sk lockd"><img src="/files/o_pass_skill_maim_and_kill.png">Maim and Kill</div>
+        <div class="sk lockd"><img src="/files/o_pass_skill_finish_him.png">Finish Him</div>
+      </div>
+      <div class="legend"><span><b style="border-color:#e2b24a"></b>learned (click to unlearn, +1 point)</span><span><b style="border-color:#7a8f5a"></b>available (click to learn)</span><span><b style="border-color:#4a3f31;background:#333"></b>locked</span></div>
+      <div class="pop"><b>Dismember</b> · learned<br><span style="color:#a8987a">Unlearning refunds 1 ability point and re-locks skills that need it.</span><br><span class="btn" style="margin-top:6px">Unlearn</span></div>
+    </div>
+
+    <div class="lockpanel">
+      <h4>Pyromancy &nbsp;🔒</h4>
+      <p style="font-size:12px;color:#a8987a;margin:0 0 10px">This tree is closed, as if you never read its treatise.</p>
+      <span class="btn gold">Unlock tree</span>
+      <div class="sk-row" style="margin-top:14px;flex-wrap:wrap;gap:14px">
+        <div class="sk lockd"><img src="/files/o_skill_flame_ring_ico.png">Flame Ring</div>
+        <div class="sk lockd"><img src="/files/o_skill_melting_ray_ico.png">Melting Ray</div>
+        <div class="sk lockd"><img src="/files/o_skill_incineration_ico.png">Incin&shy;eration</div>
+        <div class="sk lockd"><img src="/files/o_skill_fire_barrage_ico.png">Fire Barrage</div>
+        <div class="sk lockd"><img src="/files/o_pass_skill_pyromania.png">Pyromania</div>
+        <div class="sk lockd"><img src="/files/o_pass_skill_scorch.png">Scorch</div>
+      </div>
+    </div>
+  </div>
+</div>
