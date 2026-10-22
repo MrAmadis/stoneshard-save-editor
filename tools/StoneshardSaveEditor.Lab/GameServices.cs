@@ -11,7 +11,7 @@ public sealed class GameServices
         Objects = objects;
         Tables = tables;
         Localization = localization;
-        Shapes = new GameItemShapes(sprites, objects);
+        Shapes = new GameItemShapes(sprites, objects, tables.ItemsStats);
         Catalog = new ItemCatalog(tables, localization, sprites, objects);
     }
 

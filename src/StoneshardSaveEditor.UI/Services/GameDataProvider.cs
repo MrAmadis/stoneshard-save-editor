@@ -105,6 +105,6 @@ public sealed class GameDataProvider(Func<string?> configuredDir, string cacheRo
         var localization = Localization.Parse(exe);
         var icons = new IconService(sprites, new TexturePages(dataWin), IconService.CacheDirFor(cacheRoot, dataWinPath));
         return new GameFiles(gameDir, objects, tables, localization, icons,
-            new GameItemShapes(sprites, objects), new ItemCatalog(tables, localization, sprites, objects));
+            new GameItemShapes(sprites, objects, tables.ItemsStats), new ItemCatalog(tables, localization, sprites, objects));
     }
 }

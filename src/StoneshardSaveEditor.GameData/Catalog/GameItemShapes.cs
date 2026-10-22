@@ -1,3 +1,4 @@
+using System.Globalization;
 using StoneshardSaveEditor.Core.Editing;
 
 namespace StoneshardSaveEditor.GameData;
@@ -5,11 +6,13 @@ namespace StoneshardSaveEditor.GameData;
 /// <summary>
 /// Icons and bag footprints for item names. Object items (<c>o_inv_*</c>) use the sprite their game object draws with;
 /// generated gear uses <c>s_inv_</c> + its name in lowercase letters and digits ("Guard Crossbow" → s_inv_guardcrossbow).
+/// Stack limits come from the items table's <c>stack</c> column.
 /// </summary>
-public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects) : IItemShapeProvider
+public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects, GameTable items) : IItemShapeProvider
 {
     public const string Missing = "missing";
     private const int CellPixels = 27;
+    private const string ObjectPrefix = "o_inv_";
 
     public string SpriteFor(string itemName)
     {
@@ -25,6 +28,13 @@ public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects) : I
         var (w, h) = sprites.Get(sprite)!.CanvasSize;
         return (Math.Max(1, (w + CellPixels - 1) / CellPixels), Math.Max(1, (h + CellPixels - 1) / CellPixels));
     }
+
+    public int MaxStack(string itemName) =>
+        itemName.StartsWith(ObjectPrefix, StringComparison.Ordinal)
+        && items.Find(itemName[ObjectPrefix.Length..]) is { } row
+        && int.TryParse(row["stack"], NumberStyles.None, CultureInfo.InvariantCulture, out var max)
+            ? max
+            : 0;
 
     public static string GearSprite(string gearName) =>
         "s_inv_" + new string(gearName.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());

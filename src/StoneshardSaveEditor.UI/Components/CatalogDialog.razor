@@ -1,0 +1,73 @@
+@inject EditorService EditorService
+
+<div class="dialog-backdrop" @onclick="OnClose">
+    <div class="dialog panel catalog" @onclick:stopPropagation="true" role="dialog" aria-label="Add an item">
+        <h3>Add an item</h3>
+        <input class="search" type="search" placeholder="Search by name…" @bind="_query" @bind:event="oninput" />
+        <div class="chips">
+            <button class="chip @(_category is null ? "on" : "")" data-category="" @onclick="() => _category = null">All</button>
+            @foreach (var category in _categories)
+            {
+                <button class="chip @(category == _category ? "on" : "")" data-category="@category" @onclick="() => _category = category">@Names.Category(category)</button>
+            }
+        </div>
+        @{
+            var matches = Matches();
+        }
+        <div class="catalog-list">
+            @foreach (var item in matches.Take(Limit))
+            {
+                var unavailable = item.Availability == CatalogAvailability.Unavailable;
+                var (w, h) = InventoryLayout.Fit(item.W, item.H, 54, 54);
+                <button class="catalog-item" data-key="@item.Key" disabled="@unavailable" title="@(unavailable ? item.Reason : null)"
+                        @onclick="() => OnPick.InvokeAsync(item.Key)">
+                    <span class="thumb">
+                        @if (item.Sprite != GameItemShapes.Missing)
+                        {
+                            <Icon Sprite="@item.Sprite" Width="w" Height="h" />
+                        }
+                    </span>
+                    <span class="nm">@item.DisplayName</span>
+                </button>
+            }
+        </div>
+        @if (matches.Count == 0)
+        {
+            <p class="muted">No items match.</p>
+        }
+        else if (matches.Count > Limit)
+        {
+            <p class="muted">Showing @Limit of @matches.Count items. Type more of the name to narrow it down.</p>
+        }
+        <div class="dialog-actions"><button class="btn" @onclick="OnClose">Close</button></div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Rendering every icon of the ~1,600 items at once is slow on first use, so the list stops here.</summary>
+    private const int Limit = 120;
+
+    [Parameter] public EventCallback<string> OnPick { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<CatalogItem> _items = [];
+    private IReadOnlyList<string> _categories = [];
+    private string _query = "";
+    private string? _category;
+
+    protected override void OnInitialized()
+    {
+        _items = EditorService.Catalog()
+            .OrderBy(i => i.Availability == CatalogAvailability.Unavailable)
+            .ThenBy(i => i.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _categories = _items.Select(i => i.Category).Distinct()
+            .OrderBy(Names.Category, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private List<CatalogItem> Matches() => _items
+        .Where(i => _category is null || i.Category == _category)
+        .Where(i => i.DisplayName.Contains(_query.Trim(), StringComparison.OrdinalIgnoreCase))
+        .ToList();
+}

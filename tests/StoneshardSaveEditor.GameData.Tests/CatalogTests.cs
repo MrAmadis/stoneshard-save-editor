@@ -19,6 +19,8 @@ public class CatalogTests
     private static ItemCatalog Catalog() =>
         new(GameFiles.Tables, GameFiles.Localization, GameFiles.Sprites, GameFiles.Objects);
 
+    private static GameItemShapes Shapes() => new(GameFiles.Sprites, GameFiles.Objects, GameFiles.Tables.ItemsStats);
+
     private static GmObject LoadSave(string file) =>
         (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(file)).Json);
 
@@ -58,6 +60,10 @@ public class CatalogTests
         var quality = real["quality"] is GmNumber q ? q.Value : 1;
         if (enchantments.Count > 0 || (quality != 1 && quality != 6))
             ignore.UnionWith(["quality", "Suffix"]);
+
+        // Some container loot is generated without durability keys at all; a missing MaxDuration means the same as 0.
+        if (real["MaxDuration"] is null && built["MaxDuration"] is GmNumber { Value: 0 })
+            ignore.Add("MaxDuration");
 
         var keys = real.Entries.Select(e => e.Key).Union(built.Entries.Select(e => e.Key)).Where(k => !ignore.Contains(k));
         return keys.Where(k => Text(real[k]) != Text(built[k])).Select(k => $"{k}: {Text(real[k])} vs built {Text(built[k])}").ToList();
@@ -180,7 +186,7 @@ public class CatalogTests
     public void Added_consumable_lands_in_bag_with_observed_charges()
     {
         var session = Sessions.OpenVelmir();
-        var inv = new InventoryEditor(session, new GameItemShapes(GameFiles.Sprites, GameFiles.Objects));
+        var inv = new InventoryEditor(session, Shapes());
 
         var index = inv.Add(Catalog().CreateEntry("o_inv_salve", session.Root));
 
@@ -189,10 +195,27 @@ public class CatalogTests
     }
 
     [Fact]
+    public void Gold_coins_are_addable_as_a_full_stack()
+    {
+        var session = Sessions.OpenVelmir();
+        var gold = Catalog().All(session.Root).Single(i => i.Key == "o_inv_gold");
+        Assert.Equal(("Gold", CatalogAvailability.Ready), (gold.DisplayName, gold.Availability));
+        Assert.Equal("Gold", Catalog().DisplayName("o_inv_gold"));
+        var inv = new InventoryEditor(session, Shapes());
+
+        var index = inv.Add(Catalog().CreateEntry("o_inv_gold", session.Root));
+
+        var coins = inv.Read()[index];
+
+        Assert.Equal(100, coins.Count);
+        Assert.Null(coins.Charges);
+    }
+
+    [Fact]
     public void Added_gear_is_new_and_fully_repaired()
     {
         var session = Sessions.OpenVelmir();
-        var inv = new InventoryEditor(session, new GameItemShapes(GameFiles.Sprites, GameFiles.Objects));
+        var inv = new InventoryEditor(session, Shapes());
 
         var index = inv.Add(Catalog().CreateEntry("Guard Crossbow", session.Root));
 
@@ -232,11 +255,13 @@ public class CatalogTests
     [Fact]
     public void Shapes_resolve_gear_and_objects()
     {
-        var shapes = new GameItemShapes(GameFiles.Sprites, GameFiles.Objects);
+        var shapes = Shapes();
         Assert.Equal("s_inv_guardcrossbow", shapes.SpriteFor("Guard Crossbow"));
         Assert.Equal((2, 3), shapes.Footprint("Road Guard Brigandine"));
         Assert.Equal("s_inv_bondage", shapes.SpriteFor("o_inv_bandage"));
         Assert.Equal((1, 3), shapes.Footprint("o_inv_torch"));
         Assert.Equal(("missing", (1, 1)), (shapes.SpriteFor("No Such Thing"), shapes.Footprint("No Such Thing")));
+        Assert.Equal((100, 20, 0, 0), (shapes.MaxStack("o_inv_gold"), shapes.MaxStack("o_inv_leafshaped_bolts"),
+            shapes.MaxStack("o_inv_salve"), shapes.MaxStack("Guard Crossbow")));
     }
 }

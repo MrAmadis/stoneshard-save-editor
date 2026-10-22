@@ -20,7 +20,7 @@ public static class ItemPropsBuilder
 
     private static readonly HashSet<string> BuildableCategories =
     [
-        "additive", "alcohol", "backpack", "bag", "beverage", "book", "commodity", "drug", "food", "ingredient",
+        "additive", "alcohol", "backpack", "bag", "beverage", "book", "commodity", "currency", "drug", "food", "ingredient",
         "junk", "material", "medicine", "recipe", "resource", "scroll", "upgrade", "valuable",
     ];
 

@@ -3,23 +3,26 @@ using StoneshardSaveEditor.Core.Json;
 
 namespace StoneshardSaveEditor.Core.Editing;
 
-/// <summary>Footprints and icons come from the game files; Core only knows item names.</summary>
+/// <summary>Footprints, icons and stack limits come from the game files; Core only knows item names.</summary>
 public interface IItemShapeProvider
 {
     (int W, int H) Footprint(string itemName);
     string SpriteFor(string itemName);
+
+    /// <summary>How many of the item fit in one stack (gold coins 100, bolts 20); 0 when it doesn't stack.</summary>
+    int MaxStack(string itemName);
 }
 
 public sealed record ItemView(
     int Index, string Name, bool Equipped, string Slot,
     int? X, int? Y, int W, int H, int? WeaponSet,
-    double? Charges, double? Stack, double? Durability, double? MaxDurability,
+    double? Charges, double? Stack, double? Count, double? Durability, double? MaxDurability,
     bool IsGear, string Sprite);
 
 /// <summary>
 /// The character's inventory (<c>inventoryDataList</c>). Each entry is
-/// <c>[name, props, f2, cell, f4, chargesMirror, f6, f7, weaponSet, slot]</c>; bag items have slot "N/A" and a cell
-/// numbered <c>y * 10 + x</c>.
+/// <c>[name, props, f2, cell, f4, chargesMirror, count, f7, weaponSet, slot]</c>; bag items have slot "N/A" and a cell
+/// numbered <c>y * 10 + x</c>. <c>count</c> is the stack size of stackable items (gold coins, ammo) and -4 otherwise.
 /// </summary>
 public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shapes)
 {
@@ -31,7 +34,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
     private const string BagSlot = "N/A";
     private const string Moneybag = "o_inv_moneybag";
     private const int NameIndex = 0, PropsIndex = 1, F2Index = 2, CellIndex = 3, F4Index = 4, ChargesIndex = 5,
-        F6Index = 6, F7Index = 7, WeaponSetIndex = 8, SlotIndex = 9, EntryLength = 10;
+        CountIndex = 6, F7Index = 7, WeaponSetIndex = 8, SlotIndex = 9, EntryLength = 10;
 
     private GmArray List => session.Root["inventoryDataList"] as GmArray
                             ?? throw new EditRejectedException("This save has no inventory");
@@ -60,6 +63,16 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
             throw new EditRejectedException("This item doesn't stack");
         Limits.Check("Amount", value, 0, 10_000_000, whole: true);
         Props(EntryAt(index)).Set("Stack", GmNumber.From(value));
+        session.MarkChanged();
+    }
+
+    public void SetCount(int index, int value)
+    {
+        var view = ViewAt(index);
+        if (view.Count is null)
+            throw new EditRejectedException("This item doesn't stack");
+        Limits.Check("Count", value, 1, shapes.MaxStack(view.Name), whole: true);
+        EntryAt(index).Items[CountIndex] = GmNumber.From(value);
         session.MarkChanged();
     }
 
@@ -94,7 +107,8 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
 
         entry.Items[F2Index] = GmNumber.From(0);
         entry.Items[CellIndex] = GmNumber.From(spot.Y * Columns + spot.X);
-        entry.Items[F6Index] = GmNumber.From(-4);
+        if (shapes.MaxStack(name.Value) == 0 || entry.Items[CountIndex] is not GmNumber { Value: >= 0 })
+            entry.Items[CountIndex] = GmNumber.From(-4);
         entry.Items[F7Index] = GmNumber.From(0);
         entry.Items[WeaponSetIndex] = GmNumber.From(0);
         entry.Items[SlotIndex] = GmString.From(BagSlot);
@@ -154,6 +168,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var stack = props["Stack"] is GmNumber s ? s.Value : (double?)null;
         var charge = props["charge"] is GmNumber ch ? ch.Value : 0;
         var max = props["MaxDuration"] is GmNumber m && m.Value > 0 ? m.Value : (double?)null;
+        var count = shapes.MaxStack(name) > 0 && entry.Items[CountIndex] is GmNumber { Value: >= 0 } n ? n.Value : (double?)null;
 
         return new ItemView(
             index, name, equipped, slot,
@@ -161,8 +176,9 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
             equipped || cell < 0 ? null : cell / Columns,
             w, h,
             equipped && entry.Items[WeaponSetIndex] is GmNumber set ? (int)set.Value : null,
-            !isGear && stack is null && charge >= 1 ? charge : null,
+            !isGear && stack is null && count is null && charge >= 1 ? charge : null,
             stack,
+            count,
             max is null ? null : (props["Duration"] as GmNumber)?.Value ?? 0,
             max,
             isGear,

@@ -23,7 +23,10 @@ public sealed class ItemCatalog(ExeTables tables, Localization localization, Spr
     private const string NoIcon = "No icon in game files";
     private const string NoData = "Item data not readable from game files yet";
 
-    private readonly GameItemShapes _shapes = new(sprites, objects);
+    /// <summary>The game calls its coins "crowns"; players call them gold.</summary>
+    private static readonly Dictionary<string, string> Renamed = new(StringComparer.Ordinal) { ["o_inv_gold"] = "Gold" };
+
+    private readonly GameItemShapes _shapes = new(sprites, objects, tables.ItemsStats);
 
     public IReadOnlyList<CatalogItem> All(GmObject saveRoot)
     {
@@ -37,7 +40,7 @@ public sealed class ItemCatalog(ExeTables tables, Localization localization, Spr
             if (!seen.Add(row.Key))
                 continue;
             var buildable = ItemPropsBuilder.FromGearRow(row, isWeapon) is not null;
-            result.Add(Describe(row.Key, localization.English(row.Key) ?? row.Key, row["Slot"],
+            result.Add(Describe(row.Key, DisplayName(row.Key), row["Slot"],
                 buildable ? CatalogAvailability.Ready : inSave.Contains(row.Key) ? CatalogAvailability.CloneFromSave : CatalogAvailability.Unavailable));
         }
 
@@ -49,25 +52,38 @@ public sealed class ItemCatalog(ExeTables tables, Localization localization, Spr
             var availability = ItemPropsBuilder.FromItemsStatsRow(row) is not null ? CatalogAvailability.Ready
                 : inSave.Contains(key) ? CatalogAvailability.CloneFromSave
                 : CatalogAvailability.Unavailable;
-            result.Add(Describe(key, localization.English(row.Key) ?? row.Key, row["Cat"], availability));
+            result.Add(Describe(key, DisplayName(key), row["Cat"], availability));
         }
         return result;
     }
 
-    /// <summary>A complete inventory entry for a brand-new copy of the item, ready for <see cref="InventoryEditor.Add"/>.</summary>
+    /// <summary>The name players see: the game's English name, or the table key when it has none.</summary>
+    public string DisplayName(string key)
+    {
+        if (Renamed.TryGetValue(key, out var name))
+            return name;
+        var tableKey = key.StartsWith(ObjectPrefix, StringComparison.Ordinal) ? key[ObjectPrefix.Length..] : key;
+        return localization.English(tableKey) ?? tableKey;
+    }
+
+    /// <summary>
+    /// A complete inventory entry for a brand-new copy of the item, ready for <see cref="InventoryEditor.Add"/>.
+    /// Stackable items (gold coins, ammo) come as a full stack.
+    /// </summary>
     public GmArray CreateEntry(string key, GmObject saveRoot)
     {
         var props = BuildProps(key, saveRoot)
-                    ?? throw new EditRejectedException($"{localization.English(key.Replace(ObjectPrefix, "")) ?? key} can't be added: {NoData.ToLowerInvariant()}");
+                    ?? throw new EditRejectedException($"{DisplayName(key)} can't be added: {NoData.ToLowerInvariant()}");
         if (_shapes.SpriteFor(key) == GameItemShapes.Missing)
             throw new EditRejectedException($"{key} can't be added: {NoIcon.ToLowerInvariant()}");
 
         var charge = props["charge"] is GmNumber c ? c.Value : -4;
+        var maxStack = _shapes.MaxStack(key);
         var entry = new GmArray();
         entry.Items.AddRange(
         [
             GmString.From(key), props, GmNumber.From(0), GmNumber.From(-4), GmNumber.From(0),
-            GmNumber.From(charge), GmNumber.From(-4), GmNumber.From(0), GmNumber.From(0), GmString.From("N/A"),
+            GmNumber.From(charge), GmNumber.From(maxStack > 0 ? maxStack : -4), GmNumber.From(0), GmNumber.From(0), GmString.From("N/A"),
         ]);
         return entry;
     }

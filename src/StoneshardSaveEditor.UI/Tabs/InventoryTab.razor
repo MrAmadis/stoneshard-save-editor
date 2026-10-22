@@ -1,0 +1,193 @@
+@inherits EditorTab
+
+@if (Error is not null)
+{
+    <Banner Kind="error">@Error</Banner>
+}
+<div class="inventory">
+    <section class="equipment">
+        <h3>Equipped</h3>
+        <div class="doll">
+            @foreach (var cell in Doll)
+            {
+                if (cell is null)
+                {
+                    <div></div>
+                    continue;
+                }
+                @GearSlot(cell.Id, cell.Label, cell.Tall, Session.Items.Where(i => i.Equipped && cell.Holds(i)).ToList())
+            }
+        </div>
+        @{
+            var others = Session.Items.Where(i => i.Equipped && !Doll.Any(c => c?.Holds(i) == true)).ToList();
+        }
+        @if (others.Count > 0)
+        {
+            <div class="doll-other">@GearSlot("other", "other", false, others)</div>
+        }
+    </section>
+
+    <section class="backpack">
+        <h3>
+            Backpack
+            <button class="btn gold add-item" disabled="@(!Session.GameFound)" title="@(Session.GameFound ? null : "Game files not found")"
+                    @onclick="() => _catalogOpen = true">+ Add item</button>
+        </h3>
+        <div class="bag" style="width:@(InventoryEditor.Columns * Cell + 2)px;height:@(Session.BagRows * Cell + 2)px">
+            @foreach (var item in Session.Items.Where(i => !i.Equipped && i.X is not null))
+            {
+                <button class="it @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name" title="@EditorService.ItemName(item.Name)"
+                        style="left:@(item.X * Cell)px;top:@(item.Y * Cell)px;width:@(item.W * Cell)px;height:@(item.H * Cell)px"
+                        @onclick="() => Select(item)">
+                    <Icon Sprite="@item.Sprite" Width="item.W * Cell" Height="item.H * Cell" Alt="@EditorService.ItemName(item.Name)" />
+                    @if (InventoryLayout.Badge(item) is { } badge)
+                    {
+                        <span class="badge">@badge</span>
+                    }
+                </button>
+            }
+        </div>
+    </section>
+
+    <aside class="panel item-detail">
+        @if (Selected is { } sel)
+        {
+            var (iw, ih) = InventoryLayout.Fit(sel.W, sel.H, 54, 108);
+            <div class="head">
+                <Icon Sprite="@sel.Sprite" Width="iw" Height="ih" />
+                <div>
+                    <b>@EditorService.ItemName(sel.Name)</b>
+                    <span class="muted key">@sel.Name</span>
+                </div>
+            </div>
+            @if (sel.Stack is { } stack)
+            {
+                var label = sel.Name == Moneybag ? "Gold" : "Amount";
+                <div class="field" data-field="@label">
+                    <span>@label</span>
+                    <NumberField Value="stack" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetStack(sel.Index, (int)v))" />
+                </div>
+            }
+            @if (sel.Count is { } count)
+            {
+                <div class="field" data-field="Count">
+                    <span>Count</span>
+                    <NumberField Value="count" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetCount(sel.Index, (int)v))" />
+                </div>
+            }
+            @if (sel.Charges is { } charges)
+            {
+                <div class="field" data-field="Charges">
+                    <span>Charges</span>
+                    <NumberField Value="charges" Whole="true" Min="0" Max="int.MaxValue" OnCommit="v => Edit(() => EditorService.SetCharges(sel.Index, (int)v))" />
+                </div>
+            }
+            @if (sel.MaxDurability is > 0 and var max)
+            {
+                var current = sel.Durability ?? 0;
+                <div class="field" data-field="Durability">
+                    <span>Durability</span>
+                    <span class="pair">
+                        <NumberField Value="current" OnCommit="v => Edit(() => EditorService.SetDurability(sel.Index, v, max))" />
+                        <span class="muted">/</span>
+                        <NumberField Value="max" Whole="true" OnCommit="v => Edit(() => EditorService.SetDurability(sel.Index, Math.Min(current, v), v))" />
+                    </span>
+                </div>
+            }
+            <div class="detail-actions">
+                <button class="btn duplicate" disabled="@(!Session.GameFound)" title="@(Session.GameFound ? null : "Game files not found")"
+                        @onclick="() => Edit(() => EditorService.DuplicateItem(sel.Index))">Duplicate</button>
+                <button class="btn danger delete" @onclick="() => Delete(sel)">Delete</button>
+            </div>
+        }
+        else
+        {
+            <p class="muted">Select an item to change it.</p>
+        }
+    </aside>
+</div>
+
+@if (_catalogOpen)
+{
+    <CatalogDialog OnPick="Add" OnClose="() => _catalogOpen = false" />
+}
+
+@code {
+    private const int Cell = InventoryLayout.Cell;
+    private const string Moneybag = "o_inv_moneybag";
+
+    /// <summary>One box of the equipment grid and the equipped items it shows.</summary>
+    private sealed record DollCell(string Id, string Label, bool Tall, Func<ItemView, bool> Holds);
+
+    private static bool InHand(ItemView i) => i.Slot is "o_inv_right_hand" or "o_inv_left_hand";
+
+    /// <summary>The game's layout, three columns wide: hands of weapon set 0 show as "weapon", set 1 as "set 2".</summary>
+    private static readonly DollCell?[] Doll =
+    [
+        new("neck", "neck", false, i => i.Slot == "o_inv_neck"),
+        new("head", "head", false, i => i.Slot == "o_inv_head"),
+        new("back", "back", false, i => i.Slot == "o_inv_back"),
+        new("weapon", "weapon", true, i => InHand(i) && (i.WeaponSet ?? 0) == 0),
+        new("body", "body", true, i => i.Slot == "o_inv_armor"),
+        new("set2", "set 2", true, i => InHand(i) && i.WeaponSet == 1),
+        new("hands", "hands", false, i => i.Slot == "o_inv_gloves"),
+        new("belt", "belt", false, i => i.Slot == "o_inv_belt"),
+        new("rings", "rings", false, i => i.Slot is "o_inv_ring_1" or "o_inv_ring_2"),
+        null,
+        new("feet", "feet", false, i => i.Slot == "o_inv_boots"),
+        null,
+    ];
+
+    private (int Index, string Name)? _selected;
+    private bool _catalogOpen;
+
+    /// <summary>The selected item, or null once it is gone or another item took its place.</summary>
+    private ItemView? Selected =>
+        _selected is var (index, name) && index < Session.Items.Count && Session.Items[index].Name == name
+            ? Session.Items[index]
+            : null;
+
+    private bool IsSelected(ItemView item) => _selected == (item.Index, item.Name);
+
+    private void Select(ItemView item) => _selected = (item.Index, item.Name);
+
+    private RenderFragment GearSlot(string id, string label, bool tall, List<ItemView> items) =>
+        @<div class="gear-slot @(tall ? "tall" : "")" data-cell="@id">
+            <span class="lbl">@label</span>
+            @foreach (var item in items)
+            {
+                var (w, h) = InventoryLayout.Fit(item.W, item.H, 104.0 / items.Count, tall ? 156 : 100);
+                <button class="equipped @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name"
+                        title="@EditorService.ItemName(item.Name)" @onclick="() => Select(item)">
+                    <Icon Sprite="@item.Sprite" Width="w" Height="h" Alt="@EditorService.ItemName(item.Name)" />
+                    @if (InventoryLayout.Badge(item) is { } badge)
+                    {
+                        <span class="badge">@badge</span>
+                    }
+                    @if (item.MaxDurability is > 0 and var max)
+                    {
+                        <span class="dur"><i style="width:@(Percent(item.Durability ?? 0, max))%"></i></span>
+                    }
+                </button>
+            }
+        </div>;
+
+    private static string Percent(double value, double max) =>
+        (Math.Clamp(value / max, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private void Delete(ItemView item)
+    {
+        Edit(() => EditorService.DeleteItem(item.Index));
+        _selected = null;
+    }
+
+    private void Add(string key)
+    {
+        _catalogOpen = false;
+        Edit(() =>
+        {
+            var added = EditorService.AddItem(key).Items[^1];
+            _selected = (added.Index, added.Name);
+        });
+    }
+}

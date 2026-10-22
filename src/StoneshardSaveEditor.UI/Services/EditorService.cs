@@ -152,6 +152,8 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView SetStack(int index, int value) => Edit(s => Inventory(s).SetStack(index, value));
 
+    public SessionView SetCount(int index, int value) => Edit(s => Inventory(s).SetCount(index, value));
+
     public SessionView SetDurability(int index, double current, double max) => Edit(s => Inventory(s).SetDurability(index, current, max));
 
     public SessionView DeleteItem(int index) => Edit(s => Inventory(s).Delete(index));
@@ -193,6 +195,10 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             throw new EditRejectedException($"There's no unlock data for {tree.DisplayName} yet");
         new SkillsEditor(s).UnlockTree(firstTier, $"treatise_{tree.TreatisePrefix}1");
     });
+
+    /// <summary>The name players see for an inventory item ("o_inv_salve" → "Salve").</summary>
+    public string ItemName(string name) =>
+        game.Files?.Catalog.DisplayName(name) ?? Names.Pretty(name.StartsWith("o_inv_", StringComparison.Ordinal) ? name[6..] : name, null);
 
     public IReadOnlyList<CatalogItem> Catalog()
     {
@@ -271,7 +277,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             trees, rulesAvailable, reputation);
     }
 
-    /// <summary>Used when the game files can't be read: every item is 1×1 with no icon, and nothing gets placed.</summary>
+    /// <summary>Used when the game files can't be read: every item is 1×1 with no icon, nothing stacks, and nothing gets placed.</summary>
     private sealed class UnknownShapes : IItemShapeProvider
     {
         public static readonly UnknownShapes Instance = new();
@@ -279,5 +285,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         public (int W, int H) Footprint(string itemName) => (1, 1);
 
         public string SpriteFor(string itemName) => GameItemShapes.Missing;
+
+        public int MaxStack(string itemName) => 0;
     }
 }

@@ -20,6 +20,13 @@ public class InventoryEditorTests
         public (int W, int H) Footprint(string itemName) => Sizes.GetValueOrDefault(itemName, (1, 1));
 
         public string SpriteFor(string itemName) => "s_" + itemName;
+
+        public int MaxStack(string itemName) => itemName switch
+        {
+            "o_inv_leafshaped_bolts" => 20,
+            "o_inv_gold" => 100,
+            _ => 0,
+        };
     }
 
     private static (SaveSession Session, InventoryEditor Inv) Open()
@@ -116,6 +123,38 @@ public class InventoryEditorTests
         inv.SetStack(Item(inv, "o_inv_moneybag").Index, 10);
         Assert.Equal(10, Item(inv, "o_inv_moneybag").Stack);
         Assert.Throws<EditRejectedException>(() => inv.SetStack(Item(inv, "o_inv_cheese").Index, 3));
+    }
+
+    [Fact]
+    public void SetCount_updates_stack_slot()
+    {
+        var (session, inv) = Open();
+        var bolts = Item(inv, "o_inv_leafshaped_bolts");
+        Assert.Equal(19, bolts.Count);
+        Assert.Null(bolts.Charges);
+
+        inv.SetCount(bolts.Index, 5);
+
+        Assert.Equal(5, Item(inv, "o_inv_leafshaped_bolts").Count);
+        Assert.Equal(5, ((GmNumber)Entry(session, bolts.Index).Items[6]).Value);
+        Assert.Throws<EditRejectedException>(() => inv.SetCount(bolts.Index, 21));
+        Assert.Throws<EditRejectedException>(() => inv.SetCount(bolts.Index, 0));
+        var cheese = Item(inv, "o_inv_cheese");
+        Assert.Null(cheese.Count);
+        Assert.Throws<EditRejectedException>(() => inv.SetCount(cheese.Index, 2));
+    }
+
+    [Fact]
+    public void Duplicating_a_stack_keeps_its_count()
+    {
+        var (_, inv) = Open();
+
+        var index = inv.Duplicate(Item(inv, "o_inv_leafshaped_bolts").Index);
+
+        var copy = inv.Read()[index];
+
+        Assert.False(copy.Equipped);
+        Assert.Equal(19, copy.Count);
     }
 
     [Fact]

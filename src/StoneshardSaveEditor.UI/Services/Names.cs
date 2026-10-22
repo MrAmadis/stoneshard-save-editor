@@ -20,6 +20,17 @@ public static partial class Names
         };
     }
 
+    /// <summary>A label for an item catalog category, which is a table's item type ("2haxe", "Head", "food").</summary>
+    public static string Category(string category) => category switch
+    {
+        "" => "Other",
+        "2haxe" => "Two-handed axe",
+        "2hmace" => "Two-handed mace",
+        "2hsword" => "Two-handed sword",
+        "2hStaff" => "Staff",
+        _ => char.ToUpperInvariant(category[0]) + category[1..],
+    };
+
     /// <summary>The game's English name for a key when it has one, otherwise the key split into words.</summary>
     public static string Pretty(string key, Localization? localization) =>
         localization?.English(key) ?? SplitWords(key);
