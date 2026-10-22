@@ -6,6 +6,23 @@ namespace StoneshardSaveEditor.Tests.Files;
 
 public class SaveSessionTests
 {
+    [Fact]
+    public void A_failed_edit_puts_the_save_back()
+    {
+        var session = Sessions.OpenVelmir();
+        var before = GmJson.Write(session.Root);
+
+        Assert.Throws<InvalidOperationException>(() => session.Apply(() =>
+        {
+            ((GmObject)session.Root["characterDataMap"]!).Set("STR", GmNumber.From(20));
+            session.MarkChanged();
+            throw new InvalidOperationException("half-way");
+        }));
+
+        Assert.Equal(before, GmJson.Write(session.Root));
+        Assert.Equal(0, session.ChangeCount);
+    }
+
     private sealed class FakeProbe(bool running) : IGameProcessProbe
     {
         public bool IsGameRunning() => running;

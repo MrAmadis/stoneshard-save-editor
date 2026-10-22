@@ -47,6 +47,17 @@ Built with `Lab make-session-c`; saves captured in `tests/fixtures/experiments/s
 | Character list | Characters `character_11` and `character_12` did not appear in the game's list; rebuilt as `character_3`/`character_4`, they did. | Probably the game lists only `character_1`–`character_10`; the Lab should reuse free low numbers. |
 | Steam Cloud | Test characters deleted while the game was closed came back on the next launch (21:50: 5, 7, 10, 11, 12). | Steam Cloud restores files missing locally on launch; delete test characters while the game is running, or in its menu. |
 
+## Final acceptance — 2026-10-22
+
+The owner edited a test character (`character_3`) in the single-file exe and loaded it in the game.
+
+| Check | Observation | Decision |
+|---|---|---|
+| Walkthrough: gold, catalog weapon, charges, durability, respec and learn, unlock Pyromancy, reputation, Save to game | "Seems to work." | Accepted. |
+| Reputation | The game's maximum is 6000; the editor allowed up to 100,000 and scaled its bars to 5000. | Editor maximum and bars set to 6000. |
+| Salve charges | The editor allowed 6; the game's maximum is 3. | Charges capped per item at the most any copy has anywhere in the save (traders' stock and loot hold full copies). |
+| Velmir's exit save | Gone since 22:04 (loading an exit save consumes it). | Left as it is, at the owner's request; his other saves are intact. |
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)

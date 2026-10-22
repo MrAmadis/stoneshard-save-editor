@@ -227,6 +227,18 @@ public class CatalogTests
     }
 
     [Fact]
+    public void Added_containers_start_empty()
+    {
+        // The first purse in this save holds coins and gems; a purse from the catalog must not copy them (final review).
+        var root = LoadSave(Path.Combine(Fixtures.RealSavesRoot, "character_2", "autosave_2", "data.sav"));
+
+        var purse = (GmObject)Catalog().CreateEntry("o_inv_moneybag", root).Items[1];
+
+        Assert.Empty(((GmArray)purse["lootList"]!).Items);
+        Assert.Equal(0, ((GmNumber)purse["Stack"]!).Value);
+    }
+
+    [Fact]
     public void Cloned_items_drop_ownership_markers()
     {
         var root = new GmObject();

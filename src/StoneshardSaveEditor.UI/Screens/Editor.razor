@@ -131,7 +131,16 @@
 
     private void Save()
     {
-        var result = EditorService.Save();
+        SaveResult result;
+        try
+        {
+            result = EditorService.Save();
+        }
+        catch (EditRejectedException e)
+        {
+            (_notice, _offerReload) = (("error", e.Message), false);
+            return;
+        }
         _offerReload = result == SaveResult.ChangedOnDisk;
         _notice = result switch
         {
@@ -145,8 +154,15 @@
 
     private void Undo()
     {
-        EditorService.Reload();
-        _notice = null;
+        try
+        {
+            EditorService.Reload();
+            _notice = null;
+        }
+        catch (EditRejectedException e)
+        {
+            _notice = ("error", e.Message);
+        }
         _offerReload = false;
     }
 

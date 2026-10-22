@@ -93,7 +93,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
                 _skills = null;
             }
         }
-        catch (SaveFormatException e)
+        catch (Exception e) when (e is SaveFormatException or FormatException or IOException or InvalidDataException or UnauthorizedAccessException)
         {
             throw new EditRejectedException($"This save can't be opened: {e.Message}");
         }
@@ -121,8 +121,15 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
     public SaveResult Save()
     {
         SaveResult result;
-        lock (_lock)
-            result = Session.Save(_backups, options.Probe);
+        try
+        {
+            lock (_lock)
+                result = Session.Save(_backups, options.Probe);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            throw new EditRejectedException($"Couldn't write the save: {e.Message}");
+        }
         Changed?.Invoke();
         return result;
     }
@@ -140,7 +147,14 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
                      ?? throw new EditRejectedException("That backup doesn't belong to this save");
         if (options.Probe.IsGameRunning())
             throw new EditRejectedException("Close Stoneshard before restoring a backup");
-        _backups.Restore(backup, Session.Slot);
+        try
+        {
+            _backups.Restore(backup, Session.Slot);
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            throw new EditRejectedException($"Couldn't restore that backup: {e.Message}");
+        }
         return Reload();
     }
 
@@ -242,7 +256,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             var session = Session;
             if (session.ReadOnly)
                 throw new EditRejectedException($"This save is read-only: {session.ReadOnlyReason}");
-            apply(session);
+            session.Apply(() => apply(session));
         }
         Changed?.Invoke();
         return Current;

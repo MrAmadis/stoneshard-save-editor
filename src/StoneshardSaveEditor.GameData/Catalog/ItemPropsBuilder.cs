@@ -136,6 +136,11 @@ public static class ItemPropsBuilder
             props.Remove(k);
         if (props["MaxDuration"] is GmNumber max && max.Value > 0)
             props.Set("Duration", GmNumber.From(max.Value));
+        // A container (purse, quiver, sack) is copied without what the original holds, and its cached total with it.
+        if (props["lootList"] is GmArray)
+            props.Set("lootList", new GmArray());
+        if (props["Stack"] is GmNumber)
+            props.Set("Stack", GmNumber.From(0));
         return props;
     }
 
