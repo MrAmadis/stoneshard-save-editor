@@ -7,7 +7,7 @@ namespace StoneshardSaveEditor.Lab;
 public sealed record ExperimentResult(string Folder, string Label, string Purpose);
 
 /// <summary>
-/// Builds the test characters for in-game session A (design §10, plan Task 12). Each is a re-signed copy of
+/// Builds the test characters for the in-game sessions (design §10, plan Task 12). Each is a re-signed copy of
 /// Velmir's exit save with one experiment applied; the owner's real characters are never written.
 /// </summary>
 public static class Experiments
@@ -20,34 +20,69 @@ public static class Experiments
 
     public static IReadOnlyList<ExperimentResult> Build(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
     {
-        if (probe.IsGameRunning())
-            throw new InvalidOperationException("Close Stoneshard before building experiment saves");
-
-        var results = new List<ExperimentResult>();
-        void Make(string label, string purpose, Action<SaveSession> apply)
-        {
-            var folder = TestCharacterCloner.Clone(root, SourceCharacter, SourceSlot, label, minutesLater: results.Count + 1);
-            var slot = new SaveLocator(root).Scan().Single(c => c.Folder == folder).Slots.Single();
-            var session = SaveSession.Open(slot);
-            apply(session);
-            if (session.ChangeCount > 0 && session.Save(backups, probe) is var result and not SaveResult.Saved)
-                throw new InvalidOperationException($"Could not save experiment {label}: {result}");
-            results.Add(new ExperimentResult(folder, label, purpose));
-        }
-
-        Make("Osbrook", "A0: untouched copy; should load exactly like Velmir", _ => { });
-        Make("Brynn", "A1: STR 18, stat points 3, ability points 4, level 6, XP 2000, HP 999, Sanity 150, Hunger 0, Osbrook rep 9000, gold 99,999",
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook", "A0: untouched copy; should load exactly like Velmir", _ => { });
+        batch.Make("Brynn", "A1: STR 18, stat points 3, ability points 4, level 6, XP 2000, HP 999, Sanity 150, Hunger 0, Osbrook rep 9000, gold 99,999",
             s => Brynn(s, game));
-        Make("Mannshire", "A2: salve 1 charge, wineskin 2, helmet 50/105, junk deleted, a salve duplicated, Noble Longsword + Copper Ring + antitoxin + Pyromancy Treatise I added, probe salves in rows 5-9",
+        batch.Make("Mannshire", "A2: salve 1 charge, wineskin 2, helmet 50/105, junk deleted, a salve duplicated, Noble Longsword + Copper Ring + antitoxin + Pyromancy Treatise I added, probe salves in rows 5-9",
             s => Mannshire(s, game));
-        Make("Denbrie", "A3: 2 ability points; Hooking Chop unlearned; Killing Swing learned directly; Fatal Strike unlocked only",
+        batch.Make("Denbrie", "A3: 2 ability points; Hooking Chop unlearned; Killing Swing learned directly; Fatal Strike unlocked only",
             Denbrie);
         var closed = ClosedTreeTreatises(root, game);
-        Make("RottenWillow", $"A4: vol I treatise for each closed tree ({closed.Count}): read all, quit, then screenshot every skill tree",
+        batch.Make("RottenWillow", $"A4: vol I treatise for each closed tree ({closed.Count}): read all, quit, then screenshot every skill tree",
             s => FillBagWith(s, game, closed));
-        Make("Brynn_NW", "A5: Pyromancy Treatise I-IV: read I, quit; reload, read II, quit; then III, then IV",
+        batch.Make("Brynn_NW", "A5: Pyromancy Treatise I-IV: read I, quit; reload, read II, quit; then III, then IV",
             s => FillBagWith(s, game, ["o_inv_treatise_pyro1", "o_inv_treatise_pyro2", "o_inv_treatise_pyro3", "o_inv_treatise_pyro4"]));
-        return results;
+        return batch.Results;
+    }
+
+    /// <summary>
+    /// Test characters for in-game session B (plan Tasks 12, 13 and 18): skill tree layouts, gold coin and ammo stacks,
+    /// and a tree opened by the editor.
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionB(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Brynn", "B1: every tree open and every skill learned, so each icon shows: screenshot every skill tree",
+            s => LearnEverything(s, game));
+        batch.Make("Denbrie", "B2: gold coin stacks of 100, 50 and 7 added to the bag; equipped bolts set to 5: check the stacks and the gold total",
+            s => CoinsAndAmmo(s, game));
+        batch.Make("Brynn_NW", "B3: Pyromancy opened by the editor (no book read); Treatises II-IV in the bag: check the tree is open, then read II, quit; reload, read III, quit; then IV",
+            s => EditorOpensPyromancy(s, game));
+        return batch.Results;
+    }
+
+    /// <summary>Clones Velmir's exit save once per experiment, applies it and saves the clone, re-signed.</summary>
+    private sealed class Batch
+    {
+        private readonly string _root;
+        private readonly BackupService _backups;
+        private readonly IGameProcessProbe _probe;
+
+        private Batch(string root, BackupService backups, IGameProcessProbe probe)
+        {
+            _root = root;
+            _backups = backups;
+            _probe = probe;
+        }
+
+        public List<ExperimentResult> Results { get; } = [];
+
+        public static Batch Start(string root, BackupService backups, IGameProcessProbe probe) =>
+            probe.IsGameRunning()
+                ? throw new InvalidOperationException("Close Stoneshard before building experiment saves")
+                : new Batch(root, backups, probe);
+
+        public void Make(string label, string purpose, Action<SaveSession> apply)
+        {
+            var folder = TestCharacterCloner.Clone(_root, SourceCharacter, SourceSlot, label, minutesLater: Results.Count + 1);
+            var slot = new SaveLocator(_root).Scan().Single(c => c.Folder == folder).Slots.Single();
+            var session = SaveSession.Open(slot);
+            apply(session);
+            if (session.ChangeCount > 0 && session.Save(_backups, _probe) is var result and not SaveResult.Saved)
+                throw new InvalidOperationException($"Could not save experiment {label}: {result}");
+            Results.Add(new ExperimentResult(folder, label, purpose));
+        }
     }
 
     private static void Brynn(SaveSession s, GameServices game)
@@ -99,6 +134,35 @@ public static class Experiments
         skills.Unlearn("o_skill_wide_cut_ico", refundPoint: false);
         skills.Learn("o_skill_killing_swing_ico", spendPoint: false);
         skills.Unlock(["o_pass_skill_fatal_hit"]);
+    }
+
+    /// <summary>Opens every tree with unlock data the way reading Volume I does, then learns every skill for free.</summary>
+    private static void LearnEverything(SaveSession s, GameServices game)
+    {
+        var catalog = game.SkillsFor(s.Root);
+        var skills = new SkillsEditor(s);
+        foreach (var tree in catalog.Trees.Where(t => t.TreatisePrefix is not null && catalog.UnlockSet(t.Id).Count > 0))
+            skills.UnlockTree(catalog.UnlockSet(tree.Id), $"treatise_{tree.TreatisePrefix}1");
+        var learned = skills.Read().Where(x => x.Learned).Select(x => x.Object).ToHashSet();
+        foreach (var obj in catalog.Trees.SelectMany(t => t.Skills).Select(k => k.Object).Where(o => !learned.Contains(o)))
+            skills.Learn(obj, spendPoint: false);
+    }
+
+    private static void CoinsAndAmmo(SaveSession s, GameServices game)
+    {
+        var inv = new InventoryEditor(s, game.Shapes);
+        inv.Add(game.Catalog.CreateEntry("o_inv_gold", s.Root));
+        inv.SetCount(inv.Add(game.Catalog.CreateEntry("o_inv_gold", s.Root)), 50);
+        inv.SetCount(inv.Add(game.Catalog.CreateEntry("o_inv_gold", s.Root)), 7);
+        inv.SetCount(inv.Read().Single(i => i.Name == "o_inv_leafshaped_bolts").Index, 5);
+    }
+
+    private static void EditorOpensPyromancy(SaveSession s, GameServices game)
+    {
+        var catalog = game.SkillsFor(s.Root);
+        var pyromancy = catalog.Trees.Single(t => t.TreatisePrefix == "pyro");
+        new SkillsEditor(s).UnlockTree(catalog.UnlockSet(pyromancy.Id), "treatise_pyro1");
+        FillBagWith(s, game, ["o_inv_treatise_pyro2", "o_inv_treatise_pyro3", "o_inv_treatise_pyro4"]);
     }
 
     /// <summary>Volume I of every tree that is still closed on Velmir: nothing learned and nothing unlocked.</summary>

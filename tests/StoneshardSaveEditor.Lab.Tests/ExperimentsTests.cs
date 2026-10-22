@@ -67,6 +67,41 @@ public class ExperimentsTests
     }
 
     [Fact]
+    public void Session_B_builds_tree_screenshot_coin_and_unlock_characters()
+    {
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionB(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal(new[] { "Brynn", "Denbrie", "Brynn_NW" }, made.Select(m => m.Label));
+
+        var all = Load(root, made[0].Folder);
+        var learned = SkillsEditor.ReadFrom(all).ToDictionary(s => s.Object, s => s.Learned);
+        Assert.All(Game.Value.SkillsFor(all).Trees.SelectMany(t => t.Skills), k => Assert.True(learned[k.Object], k.Object));
+        Assert.Contains("treatise_pyro1", Books(all));
+
+        var bag = ((GmArray)Load(root, made[1].Folder)["inventoryDataList"]!).Items.Cast<GmArray>().ToList();
+        double Count(GmArray e) => ((GmNumber)e.Items[6]).Value;
+        Assert.Equal(new[] { 7.0, 50, 100 }, bag.Where(e => ((GmString)e.Items[0]).Value == "o_inv_gold").Select(Count).Order());
+        Assert.Equal(5, Count(bag.Single(e => ((GmString)e.Items[0]).Value == "o_inv_leafshaped_bolts")));
+
+        var unlock = Load(root, made[2].Folder);
+        var state = SkillsEditor.ReadFrom(unlock).ToDictionary(s => s.Object);
+        var catalog = Game.Value.SkillsFor(unlock);
+        var pyro = catalog.UnlockSet(catalog.Trees.Single(t => t.TreatisePrefix == "pyro").Id);
+        Assert.NotEmpty(pyro);
+        Assert.All(pyro, k => Assert.Equal((false, false), (state[k].Learned, state[k].Locked)));
+        Assert.Contains("treatise_pyro1", Books(unlock));
+        Assert.Equal(new[] { "o_inv_treatise_pyro2", "o_inv_treatise_pyro3", "o_inv_treatise_pyro4" },
+            BagItems(unlock).Select(i => i.Name).Order());
+    }
+
+    private static IEnumerable<string> Books(GmObject root) =>
+        ((GmArray)((GmObject)root["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>().Select(b => b.Value);
+
+    [Fact]
     public void Experiments_refuse_while_the_game_runs()
     {
         _ = Fixtures.GameDir;
