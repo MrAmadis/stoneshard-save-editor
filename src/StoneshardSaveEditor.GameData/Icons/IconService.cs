@@ -17,12 +17,7 @@ public sealed partial class IconService(SpriteTable sprites, TexturePages pages,
     }
 
     /// <summary>The sprite's canvas size in pixels (27 px per inventory cell).</summary>
-    public (int W, int H)? Size(string sprite) => sprites.Get(sprite) switch
-    {
-        null => null,
-        { FirstFrame: { } frame } => (frame.BoundW, frame.BoundH),
-        var s => (s.Width, s.Height),
-    };
+    public (int W, int H)? Size(string sprite) => sprites.Get(sprite)?.CanvasSize;
 
     public byte[]? GetPng(string sprite)
     {

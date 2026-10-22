@@ -15,6 +15,9 @@ public sealed class TableRow
 
     public string Key => Raw[0];
 
+    /// <summary>The table's column names, with blank or repeated headers named <c>#index</c>.</summary>
+    public IEnumerable<string> Columns => _columns.Keys;
+
     /// <summary>The cell under <paramref name="column"/>, or an empty string when the column or cell is absent.</summary>
     public string this[string column] =>
         _columns.TryGetValue(column, out var i) && i < Raw.Length ? Raw[i] : "";

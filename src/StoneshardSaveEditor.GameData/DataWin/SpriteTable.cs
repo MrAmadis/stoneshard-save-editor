@@ -6,7 +6,11 @@ public sealed record SpriteFrame(
     int TargetX, int TargetY, int TargetW, int TargetH,
     int BoundW, int BoundH, int Texture);
 
-public sealed record SpriteInfo(string Name, int Width, int Height, SpriteFrame? FirstFrame);
+public sealed record SpriteInfo(string Name, int Width, int Height, SpriteFrame? FirstFrame)
+{
+    /// <summary>The drawn canvas size in pixels: the frame's bounds when it has one (27 px per inventory cell).</summary>
+    public (int W, int H) CanvasSize => FirstFrame is { } f ? (f.BoundW, f.BoundH) : (Width, Height);
+}
 
 /// <summary>The <c>SPRT</c> chunk: every sprite's name, size and frame placements (via <c>TPAG</c>).</summary>
 public sealed class SpriteTable

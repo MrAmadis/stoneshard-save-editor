@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\StoneshardSaveEditor.Core\StoneshardSaveEditor.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="StoneshardSaveEditor.GameData.Tests" />
   </ItemGroup>
 

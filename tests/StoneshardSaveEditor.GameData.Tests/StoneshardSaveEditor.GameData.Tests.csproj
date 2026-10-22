@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <Compile Include="..\StoneshardSaveEditor.Core.Tests\TestSupport\Fixtures.cs" Link="TestSupport\Fixtures.cs" />
+    <Compile Include="..\StoneshardSaveEditor.Core.Tests\TestSupport\Sessions.cs" Link="TestSupport\Sessions.cs" />
     <Using Include="Xunit" />
   </ItemGroup>
 
