@@ -128,6 +128,23 @@ public class SkillsEditorTests
     }
 
     [Fact]
+    public void UnlockTree_unlocks_first_tier_and_records_the_book_like_reading_it()
+    {
+        var (session, skills) = Open();
+
+        skills.UnlockTree(["o_skill_flame_ring_ico", "o_pass_skill_pyromania"], "treatise_pyro1");
+
+        Assert.False(skills.Read().Single(s => s.Object == "o_skill_flame_ring_ico").Locked);
+        Assert.False(skills.Read().Single(s => s.Object == "o_pass_skill_pyromania").Locked);
+        var books = ((GmArray)((GmObject)session.Root["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>().Select(s => s.Value).ToList();
+        Assert.Equal("treatise_pyro1", books[^1]);
+        Assert.Equal(1, session.ChangeCount);
+
+        skills.UnlockTree(["o_skill_flame_ring_ico"], "treatise_pyro1");
+        Assert.Single(((GmArray)((GmObject)session.Root["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>(), s => s.Value == "treatise_pyro1");
+    }
+
+    [Fact]
     public void RefundTree_unlearns_only_learned_listed()
     {
         var (_, skills) = Open();

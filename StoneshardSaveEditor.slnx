@@ -2,11 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/StoneshardSaveEditor.Core/StoneshardSaveEditor.Core.csproj" />
     <Project Path="src/StoneshardSaveEditor.GameData/StoneshardSaveEditor.GameData.csproj" />
+    <Project Path="src/StoneshardSaveEditor.UI/StoneshardSaveEditor.UI.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/StoneshardSaveEditor.Core.Tests/StoneshardSaveEditor.Core.Tests.csproj" />
     <Project Path="tests/StoneshardSaveEditor.GameData.Tests/StoneshardSaveEditor.GameData.Tests.csproj" />
     <Project Path="tests/StoneshardSaveEditor.Lab.Tests/StoneshardSaveEditor.Lab.Tests.csproj" />
+    <Project Path="tests/StoneshardSaveEditor.UI.Tests/StoneshardSaveEditor.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/StoneshardSaveEditor.Lab/StoneshardSaveEditor.Lab.csproj" />

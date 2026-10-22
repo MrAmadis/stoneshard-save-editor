@@ -94,6 +94,22 @@ public sealed class SkillsEditor(SaveSession session)
 
     public void Unlock(IEnumerable<string> objs) => SetLocked(objs, locked: false);
 
+    /// <summary>
+    /// Opens a skill tree the way reading its treatise does (observed in-game): the first-tier skills become available
+    /// and the book is added to <c>Books_Read</c>.
+    /// </summary>
+    public void UnlockTree(IEnumerable<string> firstTier, string treatiseBook)
+    {
+        foreach (var obj in firstTier.Distinct())
+            List.Items[IndexOf(obj) + LockedField] = GmNumber.From(0);
+        var character = Character;
+        if (character["Books_Read"] is not GmArray books)
+            character.Set("Books_Read", books = new GmArray());
+        if (!books.Items.OfType<GmString>().Any(b => b.Value == treatiseBook))
+            books.Items.Add(GmString.From(treatiseBook));
+        session.MarkChanged();
+    }
+
     public void Lock(IEnumerable<string> objs) => SetLocked(objs, locked: true);
 
     private void SetLocked(IEnumerable<string> objs, bool locked)
