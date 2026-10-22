@@ -1,1 +1,60 @@
-{}
+{
+  "arcane1": [
+    "o_pass_skill_arcane_might",
+    "o_skill_planar_exchange_ico",
+    "o_skill_wormhole_ico"
+  ],
+  "armor1": [
+    "o_pass_skill_hard_target",
+    "o_pass_skill_self_repair",
+    "o_skill_brace_for_impact_ico"
+  ],
+  "dagger1": [
+    "o_pass_skill_from_the_shadow",
+    "o_pass_skill_quick_change",
+    "o_skill_double_jab_ico",
+    "o_skill_gaping_wound_ico"
+  ],
+  "dualwield1": [
+    "o_pass_skill_dual_wielding_training",
+    "o_pass_skill_dying_fervor",
+    "o_skill_deflect_ico",
+    "o_skill_series_of_strikes_ico"
+  ],
+  "electro1": [
+    "o_skill_discharge_ico",
+    "o_skill_impulse_ico"
+  ],
+  "geo1": [
+    "o_skill_runic_boulder_ico",
+    "o_skill_stone_armor_ico"
+  ],
+  "gsword1": [
+    "o_pass_skill_revanche",
+    "o_skill_feint_swing_ico",
+    "o_skill_riposte_ico"
+  ],
+  "magic1": [
+    "o_pass_skill_dispersion",
+    "o_pass_skill_precise_movements",
+    "o_skill_seal_of_finesse_ico",
+    "o_skill_seal_of_power_ico"
+  ],
+  "pyro1": [
+    "o_pass_skill_baptism_of_fire",
+    "o_pass_skill_flame_saturation",
+    "o_skill_fire_barrage_ico",
+    "o_skill_flame_ring_ico"
+  ],
+  "staff1": [
+    "o_pass_skill_battle_trance",
+    "o_pass_skill_destabilizing_hits",
+    "o_skill_hail_of_blows_ico",
+    "o_skill_step_aside_ico"
+  ],
+  "sword1": [
+    "o_pass_skill_care_blade",
+    "o_skill_cleave_ico",
+    "o_skill_keeping_distance_ico"
+  ]
+}

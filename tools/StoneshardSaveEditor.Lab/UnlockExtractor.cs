@@ -13,11 +13,28 @@ public static class UnlockExtractor
         return SkillsEditor.ReadFrom(after).Where(s => !s.Locked && wasLocked.Contains(s.Object)).Select(s => s.Object).ToList();
     }
 
-    /// <summary>Groups skills under <c>&lt;treatise prefix&gt;&lt;volume&gt;</c>, e.g. pyro1.</summary>
-    public static Dictionary<string, string[]> GroupByTreatise(IEnumerable<string> skills, Func<string, string?> treatisePrefixOf, int volume) =>
+    /// <summary>Treatise ids (e.g. <c>pyro1</c>) that appear in <c>Books_Read</c> after but not before.</summary>
+    public static IReadOnlyList<string> NewlyReadTreatises(GmObject before, GmObject after)
+    {
+        static IEnumerable<string> Books(GmObject root) =>
+            ((root["characterDataMap"] as GmObject)?["Books_Read"] as GmArray)?.Items.OfType<GmString>().Select(s => s.Value) ?? [];
+        var old = Books(before).ToHashSet();
+        return Books(after)
+            .Where(b => !old.Contains(b) && b.StartsWith("treatise_", StringComparison.Ordinal))
+            .Select(b => b["treatise_".Length..])
+            .ToList();
+    }
+
+    /// <summary>
+    /// Groups skills under <c>&lt;treatise prefix&gt;&lt;volume&gt;</c>, e.g. pyro1. With <paramref name="onlyRead"/>, keeps only
+    /// treatises that were actually read: the game also unlocks skills on its own when it recalculates a tree on load.
+    /// </summary>
+    public static Dictionary<string, string[]> GroupByTreatise(
+        IEnumerable<string> skills, Func<string, string?> treatisePrefixOf, int volume, IReadOnlyCollection<string>? onlyRead = null) =>
         skills.Select(s => (Skill: s, Prefix: treatisePrefixOf(s)))
             .Where(x => x.Prefix is not null)
             .GroupBy(x => $"{x.Prefix}{volume}")
+            .Where(g => onlyRead is null || onlyRead.Contains(g.Key))
             .ToDictionary(g => g.Key, g => g.Select(x => x.Skill).ToArray());
 
     public static void Merge(string jsonPath, Dictionary<string, string[]> entries)

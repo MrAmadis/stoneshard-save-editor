@@ -69,11 +69,23 @@ public class SkillCatalogTests
     }
 
     [Fact]
-    public void Unknown_trees_have_no_unlock_data_or_layout_yet()
+    public void Unlock_sets_come_from_observed_treatise_reads()
     {
-        Assert.Empty(Skills.UnlockSet("pyromancy"));
-        Assert.Null(Skills.Layout("pyromancy"));
+        // Observed in-game 2026-10-22: reading Pyromancy Treatise I unlocked exactly these.
+        Assert.Equal(
+            new[] { "o_pass_skill_baptism_of_fire", "o_pass_skill_flame_saturation", "o_skill_fire_barrage_ico", "o_skill_flame_ring_ico" },
+            Skills.UnlockSet("pyromancy").Order());
+        Assert.Empty(Skills.UnlockSet("combat")); // already open on Velmir, never read
+        Assert.Empty(Skills.UnlockSet("basic"));
         Assert.Throws<KeyNotFoundException>(() => Skills.TreeOf("o_skill_not_real_ico"));
+    }
+
+    [Fact]
+    public void Every_unlock_entry_belongs_to_its_treatises_tree()
+    {
+        foreach (var tree in Skills.Trees.Where(t => t.TreatisePrefix is not null))
+            Assert.All(Skills.UnlockSet(tree.Id), s => Assert.Equal(tree.Id, Skills.TreeOf(s).Id));
+        Assert.Equal(36, Skills.Trees.Sum(t => Skills.UnlockSet(t.Id).Count));
     }
 
     [Fact]

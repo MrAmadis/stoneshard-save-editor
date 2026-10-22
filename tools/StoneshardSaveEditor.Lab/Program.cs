@@ -46,7 +46,8 @@ static int ExtractUnlocks(Dictionary<string, string> o)
     var after = (GmObject)Load(Required(o, "after"));
     var skills = GameServices.Load(Required(o, "game")).SkillsFor(after);
     var unlocked = UnlockExtractor.NewlyUnlocked(before, after);
-    var grouped = UnlockExtractor.GroupByTreatise(unlocked, s => skills.TreeOf(s).TreatisePrefix, int.Parse(Required(o, "volume")));
+    var read = UnlockExtractor.NewlyReadTreatises(before, after);
+    var grouped = UnlockExtractor.GroupByTreatise(unlocked, s => skills.TreeOf(s).TreatisePrefix, int.Parse(Required(o, "volume")), read);
     UnlockExtractor.Merge(Required(o, "json"), grouped);
     foreach (var (key, list) in grouped)
         Console.WriteLine($"{key}: {string.Join(", ", list)}");

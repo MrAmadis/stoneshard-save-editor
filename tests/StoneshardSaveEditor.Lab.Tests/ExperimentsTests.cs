@@ -91,6 +91,18 @@ public class ExperimentsTests
     }
 
     [Fact]
+    public void Unlock_extractor_credits_only_treatises_that_were_read()
+    {
+        var before = (GmObject)GmJson.Parse("{ \"characterDataMap\": { \"Books_Read\": [ \"map_osbrook\" ] } }"u8);
+        var after = (GmObject)GmJson.Parse("{ \"characterDataMap\": { \"Books_Read\": [ \"map_osbrook\", \"treatise_pyro1\", \"lorebook_x\" ] } }"u8);
+
+        Assert.Equal(new[] { "pyro1" }, UnlockExtractor.NewlyReadTreatises(before, after));
+
+        var grouped = UnlockExtractor.GroupByTreatise(["a", "b"], s => s == "a" ? "pyro" : "survival", volume: 1, onlyRead: ["pyro1"]);
+        Assert.Equal(new[] { "pyro1" }, grouped.Keys);
+    }
+
+    [Fact]
     public void Unlock_extractor_merges_into_json_file()
     {
         var file = Path.Combine(Directory.CreateTempSubdirectory().FullName, "tree-unlocks.json");
