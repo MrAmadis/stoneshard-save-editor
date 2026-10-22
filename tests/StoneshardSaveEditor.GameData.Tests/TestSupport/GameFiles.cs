@@ -8,10 +8,15 @@ public static class GameFiles
     private static readonly Lazy<DataWinFile> LazyDataWin = new(() => DataWinFile.Load(Path.Combine(Fixtures.GameDir, "data.win")));
     private static readonly Lazy<SpriteTable> LazySprites = new(() => new SpriteTable(LazyDataWin.Value));
     private static readonly Lazy<ObjectTable> LazyObjects = new(() => new ObjectTable(LazyDataWin.Value, LazySprites.Value));
+    private static readonly Lazy<byte[]> LazyExe = new(() => File.ReadAllBytes(Path.Combine(Fixtures.GameDir, "StoneShard.exe")));
+    private static readonly Lazy<ExeTables> LazyTables = new(() => ExeTables.Parse(LazyExe.Value));
+    private static readonly Lazy<Localization> LazyLocalization = new(() => Localization.Parse(LazyExe.Value));
 
     public static DataWinFile DataWin => Ensure(LazyDataWin);
     public static SpriteTable Sprites => Ensure(LazySprites);
     public static ObjectTable Objects => Ensure(LazyObjects);
+    public static ExeTables Tables => Ensure(LazyTables);
+    public static Localization Localization => Ensure(LazyLocalization);
 
     private static T Ensure<T>(Lazy<T> lazy)
     {
