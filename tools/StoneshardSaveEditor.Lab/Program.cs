@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using StoneshardSaveEditor.Core.Files;
 using StoneshardSaveEditor.Core.Json;
+using StoneshardSaveEditor.Lab;
 
 // Developer tool for in-game experiments: test characters, inspecting and diffing saves.
 // It only ever creates new character folders and rewrites characters.map (after a backup).
@@ -18,13 +19,44 @@ try
         "point-continue" => PointContinue(options),
         "dump" => Dump(options),
         "diff" => DiffFiles(options),
+        "make-experiments" => MakeExperiments(options),
+        "extract-unlocks" => ExtractUnlocks(options),
+        "watch" => WatchSaves(options),
         _ => Usage(),
     };
 }
-catch (Exception e) when (e is ArgumentException or SaveFormatException or IOException or FormatException)
+catch (Exception e) when (e is ArgumentException or SaveFormatException or IOException or FormatException or InvalidOperationException)
 {
     Console.Error.WriteLine($"error: {e.Message}");
     return 1;
+}
+
+static int MakeExperiments(Dictionary<string, string> o)
+{
+    var game = GameServices.Load(Required(o, "game"));
+    var made = Experiments.Build(Required(o, "root"), game, new BackupService(BackupService.DefaultRoot), new GameProcessProbe());
+    foreach (var m in made)
+        Console.WriteLine($"{m.Folder}\t{m.Label}\t{m.Purpose}");
+    return 0;
+}
+
+static int ExtractUnlocks(Dictionary<string, string> o)
+{
+    var before = (GmObject)Load(Required(o, "before"));
+    var after = (GmObject)Load(Required(o, "after"));
+    var skills = GameServices.Load(Required(o, "game")).SkillsFor(after);
+    var unlocked = UnlockExtractor.NewlyUnlocked(before, after);
+    var grouped = UnlockExtractor.GroupByTreatise(unlocked, s => skills.TreeOf(s).TreatisePrefix, int.Parse(Required(o, "volume")));
+    UnlockExtractor.Merge(Required(o, "json"), grouped);
+    foreach (var (key, list) in grouped)
+        Console.WriteLine($"{key}: {string.Join(", ", list)}");
+    return 0;
+}
+
+static int WatchSaves(Dictionary<string, string> o)
+{
+    SnapshotStore.Watch(Required(o, "root"), Required(o, "out"));
+    return 0;
 }
 
 static int CloneTestCharacter(Dictionary<string, string> o)
@@ -97,6 +129,9 @@ static int Usage()
           point-continue       --root <characters_v1> --character <character_N> --slot <slot>
           dump                 --file <save file> [--path a.b[3]]
           diff                 --a <data.sav> --b <data.sav>
+          make-experiments     --root <characters_v1> --game <Stoneshard folder>
+          extract-unlocks      --before <data.sav> --after <data.sav> --volume <n> --game <Stoneshard folder> --json <tree-unlocks.json>
+          watch                --root <characters_v1> --out <folder>
         """);
     return 2;
 }

@@ -5,3 +5,4 @@ node_modules/
 web/dist/
 artifacts/
 .superpowers/
+tests/fixtures/experiments/

@@ -47,6 +47,20 @@ public class TestCharacterClonerTests
     }
 
     [Fact]
+    public void Clone_can_shift_the_save_time()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        TestCharacterCloner.Clone(root, "character_2", "exitsave_1", minutesLater: 30);
+
+        var original = DecodeVerified(Path.Combine(root, "character_2", "exitsave_1", "save.map"), "stOne!characters_v1!character_2!exitsave_1!shArd");
+        var shifted = DecodeVerified(Path.Combine(root, "character_3", "exitsave_1", "save.map"), "stOne!characters_v1!character_3!exitsave_1!shArd");
+        var characterMap = DecodeVerified(Path.Combine(root, "character_3", "character.map"), "stOne!characters_v1!character_3!shArd");
+        var delta = ((GmNumber)shifted["dateTime"]!).Value - ((GmNumber)original["dateTime"]!).Value;
+        Assert.Equal(30.0 / 1440, delta, 9);
+        Assert.Equal(((GmNumber)shifted["dateTime"]!).Value, ((GmNumber)characterMap["dateTime"]!).Value, 9);
+    }
+
+    [Fact]
     public void PointContinue_rewrites_characters_map_after_backing_it_up()
     {
         var root = Fixtures.CopyRealSavesToTemp();

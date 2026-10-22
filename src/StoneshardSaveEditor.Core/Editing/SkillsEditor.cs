@@ -30,9 +30,14 @@ public sealed class SkillsEditor(SaveSession session)
 
     public int AbilityPoints => Character["SP"] is { } sp ? (int)sp.AsDouble() : 0;
 
-    public IReadOnlyList<SkillState> Read()
+    public IReadOnlyList<SkillState> Read() => ReadFrom(session.Root);
+
+    /// <summary>Reads skill flags from any parsed save, without opening a session.</summary>
+    public static IReadOnlyList<SkillState> ReadFrom(GmObject saveRoot)
     {
-        var items = List.Items;
+        if ((saveRoot["skillsDataMap"] as GmObject)?["skillsAllDataList"] is not GmArray list)
+            return [];
+        var items = list.Items;
         var result = new List<SkillState>(items.Count / Stride);
         for (var i = 0; i + Stride <= items.Count; i += Stride)
             if (items[i] is GmString name)

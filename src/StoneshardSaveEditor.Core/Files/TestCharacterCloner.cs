@@ -11,7 +11,8 @@ public static class TestCharacterCloner
 {
     public const string TargetSlot = "exitsave_1";
 
-    public static string Clone(string root, string fromCharacter, string fromSlot, string? locationLabel = null)
+    /// <param name="minutesLater">Shifts the save time shown in the game's menus, so several test characters sort in a known order.</param>
+    public static string Clone(string root, string fromCharacter, string fromSlot, string? locationLabel = null, int minutesLater = 0)
     {
         var next = Directory.EnumerateDirectories(root, "character_*")
             .Select(d => int.TryParse(Path.GetFileName(d)["character_".Length..], out var n) ? n : 0)
@@ -22,8 +23,14 @@ public static class TestCharacterCloner
         var targetSlot = Path.Combine(root, character, TargetSlot);
         Directory.CreateDirectory(targetSlot);
 
+        Action<GmObject> shiftTime = map =>
+        {
+            if (minutesLater != 0 && map["dateTime"] is GmNumber t)
+                map.Set("dateTime", GmNumber.From(t.Value + minutesLater / (24.0 * 60)));
+        };
         Resign(Path.Combine(root, fromCharacter, "character.map"), Salt.For(SaveFileKind.CharacterMap, fromCharacter),
-            Path.Combine(root, character, "character.map"), Salt.For(SaveFileKind.CharacterMap, character));
+            Path.Combine(root, character, "character.map"), Salt.For(SaveFileKind.CharacterMap, character),
+            minutesLater != 0 ? shiftTime : null);
 
         var slotSalt = Salt.For(SaveFileKind.SlotFile, character, TargetSlot);
         var sourceSalt = Salt.For(SaveFileKind.SlotFile, fromCharacter, fromSlot);
@@ -31,6 +38,7 @@ public static class TestCharacterCloner
         {
             if (locationLabel is not null)
                 map.Set("locationTitleKey", GmString.From(locationLabel));
+            shiftTime(map);
         });
         Resign(Path.Combine(sourceSlot, "data.sav"), sourceSalt, Path.Combine(targetSlot, "data.sav"), slotSalt);
         var preview = Path.Combine(sourceSlot, "preview.png");

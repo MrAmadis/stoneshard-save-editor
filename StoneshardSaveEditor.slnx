@@ -6,6 +6,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/StoneshardSaveEditor.Core.Tests/StoneshardSaveEditor.Core.Tests.csproj" />
     <Project Path="tests/StoneshardSaveEditor.GameData.Tests/StoneshardSaveEditor.GameData.Tests.csproj" />
+    <Project Path="tests/StoneshardSaveEditor.Lab.Tests/StoneshardSaveEditor.Lab.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/StoneshardSaveEditor.Lab/StoneshardSaveEditor.Lab.csproj" />
