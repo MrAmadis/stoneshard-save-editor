@@ -142,16 +142,27 @@ else
             </button>
         </span>;
 
-    /// <summary>Gold once everything the link needs is learned; highlighted while one of its skills is under the mouse.</summary>
+    /// <summary>Gold once what the link carries is met; highlighted while one of its skills is under the mouse.</summary>
     private string LinkClass(SkillTreeView tree, SkillTreeDrawing.Link link)
     {
-        var met = link.Parents.All(p => tree.Skills.Any(s => s.Object == p && s.Learned));
+        var met = link.Needs.All(c => c.Any(p => Learned(tree, p)));
         var hover = _hover is not null && (link.Parents.Contains(_hover) || link.Children.Contains(_hover));
         return $"{(met ? "met" : "")} {(hover ? "hi" : "")}".Trim();
     }
 
-    private static List<string> NeedNames(SkillTreeView tree, SkillView skill) =>
-        skill.Requires.Select(o => tree.Skills.FirstOrDefault(s => s.Object == o)?.DisplayName ?? o).ToList();
+    private static bool Learned(SkillTreeView tree, string obj) => tree.Skills.Any(s => s.Object == obj && s.Learned);
+
+    /// <summary>The conditions not met yet, by name, left to right: "Fatal Strike and Finish 'Em!".</summary>
+    private static string StillNeeded(SkillTreeView tree, SkillView skill)
+    {
+        SkillView? At(string o) => tree.Skills.FirstOrDefault(s => s.Object == o);
+        return Names.Conditions(skill.Requires
+            .Where(c => !c.Any(o => Learned(tree, o)))
+            .Select(c => c.OrderBy(o => At(o)?.Col).ToList())
+            .OrderBy(c => At(c[0])?.Col)
+            .Select(c => c.Select(o => At(o)?.DisplayName ?? o).ToList())
+            .ToList());
+    }
 
     /// <summary>With game rules, availability follows the prerequisites; without, the save's own lock flag.</summary>
     private string State(SkillView skill) => skill.Learned ? "learned" : (Rules ? skill.Available : !skill.Locked) ? "available" : "locked";
@@ -170,7 +181,8 @@ else
         (_, _, false, true) => "Click to learn for 1 ability point",
         (_, _, false, false) => "Click to learn",
         (_, _, true, true) when skill.Locked && skill.Volume is { } volume => $"Locked: needs {tree.DisplayName} Treatise {Names.Roman(volume)}",
-        (_, _, true, true) => skill.Requires.Count > 0 ? $"Locked: learn {Names.List(NeedNames(tree, skill))} first" : "Locked: learn the skills before it first",
+        (_, _, true, true) when StillNeeded(tree, skill) is { Length: > 0 } needed => $"Locked: learn {needed} first",
+        (_, _, true, true) => "Locked: learn the skills before it first",
         _ => "Locked in the game. Click to learn it anyway",
     };
 

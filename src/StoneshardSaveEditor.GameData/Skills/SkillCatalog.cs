@@ -10,7 +10,8 @@ public sealed record SkillInfo(string Object, string DisplayName, string Sprite,
 
 public sealed record SkillTree(string Id, string DisplayName, string? TreatisePrefix, IReadOnlyList<SkillInfo> Skills);
 
-public sealed record SkillPosition(int Col, int Row, string[] Requires);
+/// <param name="Requires">Conditions that must all hold, each met by any one of its skills (see <see cref="SkillRules"/>).</param>
+public sealed record SkillPosition(int Col, int Row, string[][] Requires);
 
 public sealed record TreeLayout(IReadOnlyDictionary<string, SkillPosition> Skills);
 
@@ -205,5 +206,5 @@ public sealed partial class SkillCatalog
     private sealed record LayoutEntry(
         [property: System.Text.Json.Serialization.JsonPropertyName("col")] int Col,
         [property: System.Text.Json.Serialization.JsonPropertyName("row")] int Row,
-        [property: System.Text.Json.Serialization.JsonPropertyName("requires")] string[]? Requires);
+        [property: System.Text.Json.Serialization.JsonPropertyName("requires")] string[][]? Requires);
 }

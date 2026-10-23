@@ -4,37 +4,42 @@ namespace StoneshardSaveEditor.Core.Editing;
 /// The game's skill prerequisites, used by "Follow game rules". A skill is learnable when two gates are open:
 /// <list type="bullet">
 /// <item>its tier: the save's lock flag, cleared by reading that tree's treatise volume (session B: Pyromancy II–IV each
-/// opened one row; session D: Shield Bash stayed shut with both its skills learned until the second volume was read);</item>
-/// <item>its lines: every skill it requires is learned (A3: Greataxes' second tier needs all three first-tier skills,
-/// drawn as one shared bar). Every line into a skill is read the same way, so a skill with lines from two parents needs both.</item>
+/// opened one row; session D: Shield Bash stayed shut with its skills learned until the second volume was read);</item>
+/// <item>its lines, read like wiring (session D): lines that join without a dot form one connection that any of its
+/// skills satisfies (Shield Bash opened with Breakthrough alone); a junction dot needs every connection that comes into
+/// it (Regroup needed all three; Fatal Strike all of Greataxes' first row).</item>
 /// </list>
+/// So a skill's requirement is a list of conditions that must all hold, each satisfied by any one of its skills.
 /// Learning or unlearning never changes the locks; only books do.
 /// </summary>
-public sealed class SkillRules(IReadOnlyDictionary<string, string[]> requires, Func<string, IReadOnlyList<string>> firstTierOfTreeOf)
+public sealed class SkillRules(IReadOnlyDictionary<string, string[][]> requires, Func<string, IReadOnlyList<string>> firstTierOfTreeOf)
 {
     public bool CanLearn(string obj, IReadOnlyList<SkillState> state)
     {
         var at = Index(state);
-        return at.GetValueOrDefault(obj) is { Learned: false, Locked: false }
-               && Requires(obj).All(r => at.GetValueOrDefault(r)?.Learned == true);
+        return at.GetValueOrDefault(obj) is { Learned: false, Locked: false } && Satisfied(obj, o => at.GetValueOrDefault(o)?.Learned == true);
     }
 
-    /// <summary>A learned skill that needs <paramref name="obj"/>, which has to be unlearned first.</summary>
+    /// <summary>A learned skill that would lose its last way in if <paramref name="obj"/> were unlearned.</summary>
     public string? BlockingDependent(string obj, IReadOnlyList<SkillState> state)
     {
         var at = Index(state);
-        return Dependents(obj).FirstOrDefault(d => at.GetValueOrDefault(d)?.Learned == true);
+        bool LearnedWithout(string o) => o != obj && at.GetValueOrDefault(o)?.Learned == true;
+        return requires
+            .Where(r => r.Value.Any(c => c.Contains(obj)) && at.GetValueOrDefault(r.Key)?.Learned == true)
+            .Select(r => r.Key)
+            .FirstOrDefault(d => !Satisfied(d, LearnedWithout));
     }
 
-    /// <summary>What <paramref name="obj"/> needs; empty for the first tier and skills outside the known trees.</summary>
-    public IReadOnlyList<string> RequirementsOf(string obj) => Requires(obj);
+    /// <summary>The conditions <paramref name="obj"/> needs, each met by any one of its skills; empty for the first tier.</summary>
+    public IReadOnlyList<string[]> RequirementsOf(string obj) => Requires(obj);
 
     /// <summary>Whether <paramref name="obj"/> is in its tree's first tier (needs nothing).</summary>
     public bool IsFirstTier(string obj) => firstTierOfTreeOf(obj).Contains(obj);
 
-    private string[] Requires(string obj) => requires.GetValueOrDefault(obj) ?? [];
+    private bool Satisfied(string obj, Func<string, bool> learned) => Requires(obj).All(condition => condition.Any(learned));
 
-    private IEnumerable<string> Dependents(string obj) => requires.Where(r => r.Value.Contains(obj)).Select(r => r.Key);
+    private string[][] Requires(string obj) => requires.GetValueOrDefault(obj) ?? [];
 
     private static Dictionary<string, SkillState> Index(IReadOnlyList<SkillState> state) => state.ToDictionary(s => s.Object);
 }

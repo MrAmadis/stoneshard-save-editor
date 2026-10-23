@@ -278,4 +278,13 @@ public class EditorServiceTests
     [InlineData("Osbrook", "Osbrook")]
     public void Keys_are_pretty_without_localization(string key, string expected) =>
         Assert.Equal(expected, Names.Pretty(key, null));
+
+    [Theory]
+    [InlineData("A", "A")]
+    [InlineData("A|B", "A or B")]
+    [InlineData("A+B+C", "A, B and C")]
+    [InlineData("A|B+C|D", "A or B, and C or D")]
+    [InlineData("A+B|C", "A, and B or C")]
+    public void Conditions_read_as_a_sentence(string conditions, string expected) =>
+        Assert.Equal(expected, Names.Conditions(conditions.Split('+').Select(c => c.Split('|')).ToList()));
 }

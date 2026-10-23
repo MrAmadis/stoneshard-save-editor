@@ -101,43 +101,53 @@ public class SkillsTabTests
         Assert.True(toggle.HasAttribute("checked"));
     }
 
+    private static List<AngleSharp.Dom.IElement> Dots(IRenderedComponent<Editor> cut) =>
+        cut.FindAll(".links g").Where(g => g.QuerySelector("circle") is not null).ToList();
+
     [Fact]
-    public void Lines_link_each_skill_to_what_it_needs()
+    public void Lines_meet_at_a_dot_where_every_one_is_needed()
     {
         var (_, ctx, cut) = OpenSkills();
         using var _ctx = ctx;
 
         cut.Find(".tree-list [data-tree='2haxe']").Click();
 
-        // One shared bar from the three learned first-tier skills to the whole second row, drawn as met.
-        var second = cut.Find(".links g[data-children='o_skill_rampage_ico o_pass_skill_fatal_hit o_pass_skill_finish_him o_skill_reign_in_blood_ico']");
-        Assert.Equal("o_pass_skill_shieldbreaker o_skill_dismember_ico o_skill_wide_cut_ico", second.GetAttribute("data-parents"));
-        Assert.Contains("met", second.ClassList);
-        var makeSpace = cut.Find(".links g[data-children='o_skill_killing_swing_ico']");
-        Assert.Equal("o_pass_skill_fatal_hit o_pass_skill_finish_him", makeSpace.GetAttribute("data-parents"));
-        Assert.DoesNotContain("met", makeSpace.ClassList);
-        Assert.Equal(4, cut.FindAll(".links g").Count); // the bar above, Make Space, and the two single lines
+        // Like the game: Hooking Chop, Shieldbreaker and Dismember meet at one dot, which leads to the whole second row
+        // (all learned, so drawn as met); Fatal Strike and Finish 'Em! meet at another, above Make Space.
+        var dots = Dots(cut);
+        Assert.Equal(2, dots.Count);
+        Assert.Equal("o_pass_skill_shieldbreaker o_skill_dismember_ico o_skill_wide_cut_ico", dots[0].GetAttribute("data-parents"));
+        Assert.Equal("o_skill_rampage_ico o_pass_skill_fatal_hit o_pass_skill_finish_him o_skill_reign_in_blood_ico", dots[0].GetAttribute("data-children"));
+        Assert.Contains("met", dots[0].ClassList);
+        Assert.Equal("o_pass_skill_fatal_hit o_pass_skill_finish_him", dots[1].GetAttribute("data-parents"));
+        Assert.Equal("o_skill_killing_swing_ico", dots[1].GetAttribute("data-children"));
+        Assert.DoesNotContain("met", dots[1].ClassList);
+        // A line from each needed skill into its dot, plus Tool of Execution's and Maim and Kill's single lines.
+        Assert.Equal(3 + 1 + 2 + 1 + 2, cut.FindAll(".links g").Count);
+        Assert.Contains("met", cut.Find(".links g[data-parents='o_skill_wide_cut_ico']").ClassList);
 
         cut.Find(".skill-cell[data-skill='o_skill_killing_swing_ico']").MouseOver();
-        Assert.Contains("hi", cut.Find(".links g[data-children='o_skill_killing_swing_ico']").ClassList);
+        Assert.Equal(3, cut.FindAll(".links g.hi").Count); // its dot and the two lines into it
     }
 
     [Fact]
-    public void Shared_requirements_get_one_bar_and_the_rest_single_lines()
+    public void Lines_joining_without_a_dot_need_any_one()
     {
         var (h, ctx, cut) = OpenSkills();
         using var _ctx = ctx;
         var staves = h.Editor.Current.Trees.Single(t => t.Id == "staff");
         string Obj(string name) => staves.Skills.Single(s => s.DisplayName == name).Object;
+        string Objs(params string[] names) => string.Join(' ', names.Select(Obj).Order(StringComparer.Ordinal));
 
         cut.Find(".tree-list [data-tree='staff']").Click();
 
-        // Like the game: Hail of Blows and Step Aside! feed all three skills below through one bar; Destabilizing Hits
-        // and Battle Trance each add a single line.
-        var shared = cut.Find($".links g[data-parents='{string.Join(' ', new[] { Obj("Hail of Blows"), Obj("Step Aside!") }.Order(StringComparer.Ordinal))}']");
-        Assert.Equal(string.Join(' ', Obj("Now or Never"), Obj("Unwavering Stance"), Obj("Triumph")), shared.GetAttribute("data-children"));
-        Assert.Equal(Obj("Now or Never"), cut.Find($".links g[data-parents='{Obj("Destabilizing Hits")}']").GetAttribute("data-children"));
-        Assert.Equal(Obj("Triumph"), cut.Find($".links g[data-parents='{Obj("Battle Trance")}']").GetAttribute("data-children"));
+        // Session D: Hail of Blows alone opened Now or Never; Unwavering Stance needed Step Aside! too.
+        Assert.Equal(Obj("Now or Never"), cut.Find($".links g[data-parents='{Objs("Destabilizing Hits", "Hail of Blows")}']").GetAttribute("data-children"));
+        Assert.Equal(Obj("Triumph"), cut.Find($".links g[data-parents='{Objs("Battle Trance", "Step Aside!")}']").GetAttribute("data-children"));
+        Assert.Equal(Obj("Peacemaker"), cut.Find($".links g[data-parents='{Objs("Now or Never", "Unwavering Stance", "Triumph")}']").GetAttribute("data-children"));
+        var dot = Assert.Single(Dots(cut));
+        Assert.Equal(Objs("Hail of Blows", "Step Aside!"), dot.GetAttribute("data-parents"));
+        Assert.Equal(Obj("Unwavering Stance"), dot.GetAttribute("data-children"));
     }
 
     [Fact]
@@ -170,6 +180,22 @@ public class SkillsTabTests
 
         Assert.True(makeSpace.HasAttribute("disabled"));
         Assert.Equal("Locked: needs Greataxes Treatise III", makeSpace.GetAttribute("title"));
+    }
+
+    [Fact]
+    public void With_rules_an_open_skill_says_which_skills_it_still_needs()
+    {
+        var (_, ctx, cut) = OpenSkills();
+        using var _ctx = ctx;
+        cut.Find(".skills-bar [data-field='AbilityPoints'] input").Change("1");
+        cut.Find(".tree-list [data-tree='2haxe']").Click();
+        cut.Find("button.unlock-tier").Click();
+        cut.Find("button.unlock-tier").Click();
+
+        Assert.Equal("Locked: learn Fatal Strike and Finish 'Em! first", Skill(cut, "Make Space").GetAttribute("title"));
+
+        Skill(cut, "Fatal Strike").Click();
+        Assert.Equal("Locked: learn Finish 'Em! first", Skill(cut, "Make Space").GetAttribute("title"));
     }
 
     [Fact]

@@ -6,61 +6,75 @@ namespace StoneshardSaveEditor.Tests.Editing;
 
 public class SkillRulesTests
 {
-    // Synthetic tree: A (tier 1) → B, A → C, B → D; E needs both B and C (a shared bar in the game).
-    // A skill's lock is its tier's book (session D); its lines are the skills it needs.
+    // Synthetic tree: A (tier 1) → B and C; D needs B; E needs B and C (lines meeting at a dot);
+    // F needs B or C (lines joining without a dot). A skill's lock is its tier's book.
     private static readonly SkillRules Rules = new(
-        new Dictionary<string, string[]> { ["A"] = [], ["B"] = ["A"], ["C"] = ["A"], ["D"] = ["B"], ["E"] = ["B", "C"] },
+        new Dictionary<string, string[][]>
+        {
+            ["A"] = [], ["B"] = [["A"]], ["C"] = [["A"]], ["D"] = [["B"]], ["E"] = [["B"], ["C"]], ["F"] = [["B", "C"]],
+        },
         _ => ["A"]);
 
-    private static List<SkillState> State(string learned, string locked) =>
-        "ABCDE".Select(c => new SkillState(c.ToString(), learned.Contains(c), locked.Contains(c))).ToList();
+    private static List<SkillState> State(string learned, string locked = "") =>
+        "ABCDEF".Select(c => new SkillState(c.ToString(), learned.Contains(c), locked.Contains(c))).ToList();
 
     [Fact]
     public void A_first_tier_skill_is_learnable_while_its_tree_is_open()
     {
-        Assert.True(Rules.CanLearn("A", State(learned: "", locked: "BCDE")));
-        Assert.False(Rules.CanLearn("A", State(learned: "", locked: "ABCDE")));
-        Assert.False(Rules.CanLearn("A", State(learned: "A", locked: "")));
+        Assert.True(Rules.CanLearn("A", State(learned: "", locked: "BCDEF")));
+        Assert.False(Rules.CanLearn("A", State(learned: "", locked: "ABCDEF")));
+        Assert.False(Rules.CanLearn("A", State(learned: "A")));
     }
 
     [Fact]
     public void A_skill_needs_its_tier_opened_by_the_book_and_its_lines_learned()
     {
-        // Session D: Shield Bash stayed shut with both its skills learned until the second volume was read.
-        Assert.False(Rules.CanLearn("B", State(learned: "A", locked: "BCDE")));
-        Assert.True(Rules.CanLearn("B", State(learned: "A", locked: "DE")));
-        Assert.False(Rules.CanLearn("D", State(learned: "A", locked: "")));
+        // Session D: Shield Bash stayed shut with its skills learned until the second volume was read.
+        Assert.False(Rules.CanLearn("B", State(learned: "A", locked: "BCDEF")));
+        Assert.True(Rules.CanLearn("B", State(learned: "A")));
+        Assert.False(Rules.CanLearn("D", State(learned: "A")));
     }
 
     [Fact]
-    public void A_skill_needing_two_waits_for_both()
+    public void Lines_meeting_at_a_dot_are_all_needed()
     {
-        Assert.False(Rules.CanLearn("E", State(learned: "AB", locked: "")));
-        Assert.True(Rules.CanLearn("E", State(learned: "ABC", locked: "")));
+        // Session D: Regroup needed all three skills feeding its dot; Fatal Strike all three of Greataxes' first row.
+        Assert.False(Rules.CanLearn("E", State(learned: "AB")));
+        Assert.True(Rules.CanLearn("E", State(learned: "ABC")));
     }
 
     [Fact]
-    public void Unlearning_A_is_blocked_while_B_is_learned()
+    public void Lines_joining_without_a_dot_need_any_one()
     {
-        var state = State(learned: "AB", locked: "E");
+        // Session D: Shield Bash opened with Breakthrough alone; Elusiveness with Dash alone.
+        Assert.True(Rules.CanLearn("F", State(learned: "AB")));
+        Assert.True(Rules.CanLearn("F", State(learned: "AC")));
+        Assert.False(Rules.CanLearn("F", State(learned: "A")));
+    }
 
-        Assert.Equal("B", Rules.BlockingDependent("A", state));
-        Assert.Null(Rules.BlockingDependent("B", state));
+    [Fact]
+    public void Unlearning_is_blocked_only_when_a_learned_skill_would_lose_its_last_way_in()
+    {
+        Assert.Equal("D", Rules.BlockingDependent("B", State(learned: "ABD")));
+        Assert.Equal("E", Rules.BlockingDependent("C", State(learned: "ABCE")));
+        Assert.Null(Rules.BlockingDependent("B", State(learned: "ABCF"))); // F still has C
+        Assert.Equal("F", Rules.BlockingDependent("B", State(learned: "ABF")));
     }
 
     [Fact]
     public void Requirements_are_listed_for_tooltips()
     {
-        Assert.Equal(new[] { "B", "C" }, Rules.RequirementsOf("E"));
+        Assert.Equal(new[] { new[] { "B" }, ["C"] }, Rules.RequirementsOf("E"));
+        Assert.Equal(new[] { new[] { "B", "C" } }, Rules.RequirementsOf("F"));
         Assert.Empty(Rules.RequirementsOf("A"));
     }
 
-    /// <summary>Velmir's Greataxes: Hooking Chop, Shieldbreaker and Dismember lead to the second tier (in-game finding A3).</summary>
+    /// <summary>Velmir's Greataxes: Hooking Chop, Shieldbreaker and Dismember all lead to the second tier (A3, session D).</summary>
     private static readonly SkillRules Greataxes = new(
-        new Dictionary<string, string[]>
+        new Dictionary<string, string[][]>
         {
             ["o_skill_wide_cut_ico"] = [], ["o_pass_skill_shieldbreaker"] = [], ["o_skill_dismember_ico"] = [],
-            ["o_pass_skill_fatal_hit"] = ["o_skill_wide_cut_ico", "o_pass_skill_shieldbreaker", "o_skill_dismember_ico"],
+            ["o_pass_skill_fatal_hit"] = [["o_skill_wide_cut_ico"], ["o_pass_skill_shieldbreaker"], ["o_skill_dismember_ico"]],
         },
         _ => ["o_skill_wide_cut_ico", "o_pass_skill_shieldbreaker", "o_skill_dismember_ico"]);
 

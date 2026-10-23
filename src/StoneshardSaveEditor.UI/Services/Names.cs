@@ -29,6 +29,16 @@ public static partial class Names
     public static string List(IReadOnlyList<string> names) =>
         names.Count <= 1 ? string.Concat(names) : $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}";
 
+    /// <summary>Conditions for a sentence, each met by any one of its names: "A and B", "A or B, and C".</summary>
+    public static string Conditions(IReadOnlyList<IReadOnlyList<string>> conditions)
+    {
+        var parts = conditions.Select(Either).ToList();
+        return conditions.Any(c => c.Count > 1) ? string.Join(", and ", parts) : List(parts);
+    }
+
+    private static string Either(IReadOnlyList<string> names) =>
+        names.Count <= 1 ? string.Concat(names) : $"{string.Join(", ", names.Take(names.Count - 1))} or {names[^1]}";
+
     /// <summary>A label for an item catalog category, which is a table's item type ("2haxe", "Head", "food").</summary>
     public static string Category(string category) => category switch
     {

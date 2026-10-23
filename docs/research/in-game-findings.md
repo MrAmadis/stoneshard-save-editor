@@ -30,7 +30,7 @@ Built with `Lab make-session-b`; saves captured by the Lab watcher in `tests/fix
 
 | Experiment | Observation (owner + save snapshots) | Decision |
 |---|---|---|
-| B1 Brynn: every tree opened and every skill learned | 22 screenshots (`…\screenshots61022205947_1.jpg` to `…210021_1.jpg`) show every icon and the lines between them. Basic Skills shows its 4 known skills over 12 padlocked slots that are not in the save; Survival's top row also shows Butchering. | Transcribed into `skill-trees.json` (21 trees, 227 skills): row, order in the row, and requirements. A shared bar means every skill above it is needed (as A3 showed for Greataxes); every line into a skill is read as "needed". Butchering (innate, filed under Basic) is left out of Survival's requirements; Basic has no layout. |
+| B1 Brynn: every tree opened and every skill learned | 22 screenshots (`…\screenshots61022205947_1.jpg` to `…210021_1.jpg`) show every icon and the lines between them. Basic Skills shows its 4 known skills over 12 padlocked slots that are not in the save; Survival's top row also shows Butchering. | Transcribed into `skill-trees.json` (21 trees, 227 skills): row, order in the row, and requirements. A shared bar means every skill above it is needed (as A3 showed for Greataxes); every line into a skill is read as "needed". Butchering (innate, filed under Basic) is left out of Survival's requirements; Basic has no layout. *Superseded by session D: lines read like wiring.* |
 | B2 Denbrie: gold coin stacks 100, 50, 7 in the bag; equipped bolts 5 | Bolts showed 5. The gold total first showed just over 3000 (purse 2864 + 157 coins). After opening the purse it showed **157**: the purse was empty and the coins were loose in the inventory. | Ammo counts work. A purse's gold is the coin stacks **inside it** (its `lootList`, stacks of up to 100); its `Stack` is only a cached total the game recomputes when the purse is opened. Velmir's purse claims 2864 with no coins inside (since his `save_2` of 2026-10-21, before this editor existed; `autosave_1` still had 136 as coins 100 + 36). Editing gold must write coins into the purse, not just `Stack`. |
 | B3 Brynn_NW: Pyromancy opened by the editor, Treatises II–IV read | The tree opened with its first skills available without reading a book; II, III and IV each unlocked one row. | **Unlock tree** works. Volume II → Scorch, Feed the Flames, Magma Rain, Flame Wave; III → From Blaze to Furnace (`o_pass_skill_safe_distance`), Melting Ray, Incineration; IV → Pyromania, Excess Heat, Inferno. "Unlock tree" opens what Volume I opens. |
 | Exit saves | Characters 8 and 9 disappeared again after loading; 10 was re-saved on each quit. | As in session A: loading an exit save consumes it. |
@@ -58,6 +58,18 @@ The owner edited a test character (`character_3`) in the single-file exe and loa
 | Salve charges | The editor allowed 6; the game's maximum is 3. | Charges capped per item at the most any copy has anywhere in the save (traders' stock and loot hold full copies). |
 | Velmir's exit save | Gone since 22:04 (loading an exit save consumes it). | Left as it is, at the owner's request; his other saves are intact. |
 
+## Session D — 2026-10-23
+
+What "Follow game rules" should allow. Built with `Lab make-session-d` as `character_4`.
+
+| Experiment | Observation (owner) | Decision |
+|---|---|---|
+| D1: one first-row skill per tree left to learn, Velmir's books | Learning Breakthrough, then Moment of Retribution, did not open Shield Bash. | A tier also needs its treatise volume: volume N opens row N, and the save's `Locked` flag is that gate. Learning never unlocks anything; the editor got "Unlock tier". |
+| D2: every treatise read, only starting skills, 100 points | Breakthrough alone opened Shield Bash. Hail of Blows alone opened Now or Never; adding Step Aside! opened Unwavering Stance and Triumph. Precise Hits opened Pikeman Stance, which opened One at a Time! but not Regroup: Regroup needed every skill in the row above it. Disengage then Dash opened Elusiveness. Hooking Chop and Shieldbreaker did not open Fatal Strike. Cleaving Strike opened Gloat. The owner marked the small dots where lines meet (Spears, Greataxes). | Lines read like wiring. Lines that join without a dot are one condition that any of their skills meets; a dot needs every line that comes into it. So each skill needs a list of conditions, all of them, each met by any one of its skills. `skill-trees.json` re-transcribed that way from the B1 screenshots; the drawing now follows the game's (a wire per condition, a dot where a skill's conditions meet). |
+
+Not yet seen in-game, read from the screenshots by the same pattern: Axes (Reprisal needs Mutilating Lunge or Ferocity, and Cut Through or No Mercy), Greatswords (Taste of Victory needs Recklessness or Feast of Steel), Armored Combat (Battering Ram needs any one of the row above; its join has no dot), Arcanistics (Time Echo needs Wormhole or Dimensional Shift).
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
+- Session D's four unconfirmed patterns above.

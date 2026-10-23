@@ -33,8 +33,8 @@ public class SkillTreesDataTests
             Assert.True(skills.SetEquals(layout.Skills.Keys), $"{tree.Id}: layout and tree skills differ");
             foreach (var (obj, at) in layout.Skills)
             {
-                Assert.All(at.Requires, r => Assert.True(skills.Contains(r), $"{tree.Id}/{obj} requires {r} from another tree"));
-                Assert.All(at.Requires, r => Assert.True(layout.Skills[r].Row < at.Row, $"{tree.Id}/{obj} requires {r}, which is not above it"));
+                Assert.All(at.Requires.SelectMany(c => c), r => Assert.True(skills.Contains(r), $"{tree.Id}/{obj} requires {r} from another tree"));
+                Assert.All(at.Requires.SelectMany(c => c), r => Assert.True(layout.Skills[r].Row < at.Row, $"{tree.Id}/{obj} requires {r}, which is not above it"));
             }
             var cells = layout.Skills.Values.Select(p => (p.Row, p.Col)).ToList();
             Assert.Equal(cells.Count, cells.Distinct().Count());
@@ -87,5 +87,30 @@ public class SkillTreesDataTests
         Assert.True(rules.CanLearn("o_pass_skill_fatal_hit", state));
         Assert.Equal("o_pass_skill_fatal_hit", rules.BlockingDependent("o_skill_wide_cut_ico",
             [.. state.Take(3), new Core.Editing.SkillState("o_pass_skill_fatal_hit", Learned: true, Locked: false)]));
+    }
+
+    [Theory]
+    // Session D, every treatise read: what the owner learned, in order, and what that made learnable.
+    [InlineData("shield", "Breakthrough", "Shield Bash", true)]
+    [InlineData("staff", "Hail of Blows", "Now or Never", true)]
+    [InlineData("staff", "Hail of Blows", "Unwavering Stance", false)]
+    [InlineData("staff", "Hail of Blows, Step Aside!", "Unwavering Stance", true)]
+    [InlineData("staff", "Hail of Blows, Step Aside!", "Triumph", true)]
+    [InlineData("spear", "Precise Hits", "Pikeman Stance", true)]
+    [InlineData("spear", "Precise Hits, Pikeman Stance", "One at a Time!", true)]
+    [InlineData("spear", "Precise Hits, Pikeman Stance", "Regroup", false)]
+    [InlineData("spear", "Precise Hits, Nail Down, Impaling Lunge, No Retreat, Pikeman Stance, Wounding Spearhead, Determination", "Regroup", true)]
+    [InlineData("athletic", "Disengage, Dash", "Elusiveness", true)]
+    [InlineData("2haxe", "Hooking Chop, Shieldbreaker", "Fatal Strike", false)]
+    [InlineData("sword", "Cleaving Strike", "Gloat", true)]
+    public void Lines_decide_what_is_learnable_once_every_book_is_read(string treeId, string learned, string skill, bool learnable)
+    {
+        var tree = TreesWithTreatise().Single(t => t.Id == treeId);
+        var names = learned.Split(", ").ToHashSet();
+        string Obj(string name) => tree.Skills.Single(s => s.DisplayName == name).Object;
+        Assert.All(names, n => Obj(n)); // every name is the game's
+        var state = tree.Skills.Select(s => new Core.Editing.SkillState(s.Object, names.Contains(s.DisplayName), Locked: false)).ToList();
+
+        Assert.Equal(learnable, Catalog.Value.Rules()!.CanLearn(Obj(skill), state));
     }
 }
