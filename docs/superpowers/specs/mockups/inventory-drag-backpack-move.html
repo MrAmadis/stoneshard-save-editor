@@ -1,0 +1,51 @@
+<style>
+  .inv { background:#1d1913; padding:14px; border-radius:8px; color:#d9cbb0; font:13px Georgia, serif; }
+  .bag { border:1px solid #4a3f30; background:#211c14; position:relative; width:300px; height:150px;
+         background-image:linear-gradient(#2c251b 1px, transparent 1px), linear-gradient(90deg, #2c251b 1px, transparent 1px); background-size:30px 30px; }
+  .it { position:absolute; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#1d1913; font-weight:bold; }
+  .armor { background:#8c7a5c; }
+  .sword { background:#b9c4cf; }
+  .potion { background:#b0553f; }
+  .ghost { opacity:.35; outline:2px dashed #d6b45a; background:none; color:#d6b45a; }
+  .fit { outline:2px solid #7fbf5a; background:#7fbf5a33; }
+  .clash { outline:2px solid #d0533f; background:#d0533f33; }
+  .drag { opacity:.85; transform:rotate(-4deg); box-shadow:0 4px 12px #000a; }
+  .cap { color:#8a7b62; font-size:12px; margin:6px 0 0; }
+</style>
+
+<h2>Moving things around the backpack</h2>
+<p class="subtitle">My guess. While you drag, the backpack shows where the item would land.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">It fits: green, and it moves there</div>
+    <div class="mockup-body">
+      <div class="inv">
+        <div class="bag">
+          <div class="it sword" style="left:0;top:0;width:30px;height:90px">sword</div>
+          <div class="it ghost" style="left:60px;top:0;width:60px;height:90px">armor</div>
+          <div class="it potion" style="left:150px;top:30px;width:30px;height:30px">pot</div>
+          <div class="it fit" style="left:210px;top:30px;width:60px;height:90px"></div>
+          <div class="it armor drag" style="left:216px;top:36px;width:60px;height:90px">armor</div>
+        </div>
+      </div>
+      <p class="cap">The outline is the item's whole shape where it would land.</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Something's in the way: red, and it goes back</div>
+    <div class="mockup-body">
+      <div class="inv">
+        <div class="bag">
+          <div class="it sword" style="left:0;top:0;width:30px;height:90px">sword</div>
+          <div class="it ghost" style="left:60px;top:0;width:60px;height:90px">armor</div>
+          <div class="it potion" style="left:150px;top:30px;width:30px;height:30px">pot</div>
+          <div class="it clash" style="left:120px;top:30px;width:60px;height:90px"></div>
+          <div class="it armor drag" style="left:126px;top:36px;width:60px;height:90px">armor</div>
+        </div>
+      </div>
+      <p class="cap">Dropping here does nothing: the armor stays where it was.</p>
+    </div>
+  </div>
+</div>
