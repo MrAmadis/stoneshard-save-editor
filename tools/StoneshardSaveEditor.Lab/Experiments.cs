@@ -72,16 +72,17 @@ public static class Experiments
 
     /// <summary>
     /// Test character for in-game session D: does a skill with lines from two places need both, as "Follow game rules"
-    /// assumes (Task 13 ruling)? Each tree has everything but one of those lines learned; the game recomputes the locks
-    /// on load, so the owner sees whether the skill is available.
+    /// assumes (Task 13 ruling)? The game recomputes which skills open when one is learned in-game, not on load, so each
+    /// tree is one skill short: the owner learns it (10 ability points) and reports what opens.
     /// </summary>
     public static IReadOnlyList<ExperimentResult> BuildSessionD(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
     {
         var batch = Batch.Start(root, backups, probe);
         batch.Make("Denbrie",
-            "D1: is the skill available? Shields: Shield Bash (Breakthrough learned, Moment of Retribution not). Staves: Now or Never, " +
-            "Unwavering Stance, Triumph (Hail of Blows + Step Aside! learned). Polearms: Regroup, One at a Time! (all but Determination " +
-            "and No Retreat learned). Athletics: Elusiveness (Disengage + Dash learned, Inner Reserves not)",
+            "D1 (10 ability points): learn one skill per tree and say what opens. Shields: learn Breakthrough, does Shield Bash open " +
+            "(Moment of Retribution not learned)? Staves: learn Step Aside!, do Now or Never, Unwavering Stance, Triumph open? " +
+            "Polearms: learn Pikeman Stance, do One at a Time! and Regroup open (Determination not learned)? Athletics: learn Dash, " +
+            "does Elusiveness open (Inner Reserves not learned)?",
             s => RulesCheck(s, game));
         return batch.Results;
     }
@@ -97,10 +98,14 @@ public static class Experiments
             foreach (var name in names)
                 skills.Learn(catalog.Trees.Single(t => t.Id == tree).Skills.Single(k => k.DisplayName == name).Object, spendPoint: false);
         }
-        Learn("shield", "Breakthrough");
-        Learn("staff", "Hail of Blows", "Step Aside!");
-        Learn("spear", "Precise Hits", "Pikeman Stance", "Nail Down", "Impaling Lunge", "Wounding Spearhead");
-        Learn("athletic", "Disengage", "Dash");
+        string Obj(string tree, string name) => catalog.Trees.Single(t => t.Id == tree).Skills.Single(k => k.DisplayName == name).Object;
+
+        Learn("staff", "Hail of Blows");
+        Learn("spear", "Precise Hits", "Nail Down", "Impaling Lunge", "Wounding Spearhead");
+        Learn("athletic", "Disengage");
+        // The one skill left to learn in each tree is ready to learn; what it opens is the game's answer.
+        skills.Unlock([Obj("shield", "Breakthrough"), Obj("staff", "Step Aside!"), Obj("spear", "Pikeman Stance"), Obj("athletic", "Dash")]);
+        new CharacterEditor(s).Set(CharacterField.AbilityPoints, 10);
     }
 
     private static void SetGold(SaveSession s, GameServices game, int amount) =>

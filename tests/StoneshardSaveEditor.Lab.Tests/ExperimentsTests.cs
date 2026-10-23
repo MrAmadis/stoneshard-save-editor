@@ -116,19 +116,26 @@ public class ExperimentsTests
     [Fact]
     public void Session_D_builds_the_rules_check_character()
     {
+        // The game recomputes which skills open when one is learned in-game, not on load (owner, session D): so the owner
+        // learns one skill per tree and reports what opens.
         _ = Fixtures.GameDir;
         var root = Fixtures.CopyRealSavesToTemp();
         var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
 
         var made = Experiments.BuildSessionD(root, Game.Value, backups, new FakeProbe(false)).Single();
 
-        var state = SkillsEditor.ReadFrom(Load(root, made.Folder)).ToDictionary(s => s.Object);
-        var learned = Game.Value.SkillsFor(Load(root, made.Folder)).Trees
+        var save = Load(root, made.Folder);
+        var state = SkillsEditor.ReadFrom(save).ToDictionary(s => s.Object);
+        var skills = Game.Value.SkillsFor(save).Trees
             .Where(t => t.Id is "shield" or "staff" or "spear" or "athletic")
-            .SelectMany(t => t.Skills).Where(s => state[s.Object].Learned).Select(s => s.DisplayName).Order().ToList();
-        Assert.Equal(new[] { "Breakthrough", "Dash", "Disengage", "Hail of Blows", "Impaling Lunge", "Nail Down", "Pikeman Stance",
-            "Precise Hits", "Step Aside!", "Wounding Spearhead" }, learned);
-        Assert.False(state["o_pass_skill_battle_trance"].Locked); // Staves opened as Volume I does
+            .SelectMany(t => t.Skills).ToDictionary(s => s.DisplayName, s => state[s.Object]);
+        Assert.Equal(new[] { "Disengage", "Hail of Blows", "Impaling Lunge", "Nail Down", "Precise Hits", "Wounding Spearhead" },
+            skills.Where(s => s.Value.Learned).Select(s => s.Key).Order());
+        Assert.All(new[] { "Breakthrough", "Step Aside!", "Pikeman Stance", "Dash" },
+            n => Assert.Equal((false, false), (skills[n].Learned, skills[n].Locked)));
+        Assert.All(new[] { "Shield Bash", "Now or Never", "Unwavering Stance", "Triumph", "One at a Time!", "Regroup", "Elusiveness" },
+            n => Assert.True(skills[n].Locked, n));
+        Assert.Equal(10, ((GmObject)save["characterDataMap"]!)["SP"]!.AsDouble());
     }
 
     [Fact]
