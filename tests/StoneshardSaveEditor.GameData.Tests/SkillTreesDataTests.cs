@@ -55,6 +55,25 @@ public class SkillTreesDataTests
     }
 
     [Fact]
+    public void Each_treatise_volume_opens_one_row()
+    {
+        // Session B: Pyromancy II, III and IV each unlocked exactly one more row; Volume I matches the first row everywhere.
+        var trees = TreesWithTreatise().ToList();
+        Assert.All(trees, t => Assert.Equal(t.Id == "survival" ? 2 : Catalog.Value.Layout(t.Id)!.Skills.Values.Max(p => p.Row) + 1,
+            Catalog.Value.Volumes(t.Id)));
+        var pyromancy = Catalog.Value.Layout("pyromancy")!.Skills;
+        foreach (var volume in Enumerable.Range(1, 4))
+            Assert.True(Catalog.Value.TierSkills("pyromancy", volume).ToHashSet()
+                .SetEquals(pyromancy.Where(s => s.Value.Row == volume - 1).Select(s => s.Key)), $"Pyromancy {volume}");
+        Assert.Equal(new[] { "o_pass_skill_feed_the_flames", "o_pass_skill_scorch", "o_skill_flame_wave_ico", "o_skill_magma_rain_ico" },
+            Catalog.Value.TierSkills("pyromancy", 2).Order());
+        // Survival has two volumes for three rows: its first row is always open.
+        Assert.Null(Catalog.Value.VolumeOf("o_pass_skill_make_a_halt"));
+        Assert.Equal(2, Catalog.Value.VolumeOf(Catalog.Value.Layout("survival")!.Skills.First(s => s.Value.Row == 2).Key));
+        Assert.Equal(3, Catalog.Value.VolumeOf("o_skill_killing_swing_ico")); // Make Space, Greataxes' third row
+    }
+
+    [Fact]
     public void Rules_are_available_once_every_tree_has_a_layout()
     {
         _ = TreesWithTreatise();
@@ -63,7 +82,7 @@ public class SkillTreesDataTests
         Assert.NotNull(rules);
         var state = new[] { "o_skill_wide_cut_ico", "o_pass_skill_shieldbreaker", "o_skill_dismember_ico" }
             .Select(o => new Core.Editing.SkillState(o, Learned: true, Locked: false))
-            .Append(new Core.Editing.SkillState("o_pass_skill_fatal_hit", Learned: false, Locked: true))
+            .Append(new Core.Editing.SkillState("o_pass_skill_fatal_hit", Learned: false, Locked: false))
             .ToList();
         Assert.True(rules.CanLearn("o_pass_skill_fatal_hit", state));
         Assert.Equal("o_pass_skill_fatal_hit", rules.BlockingDependent("o_skill_wide_cut_ico",

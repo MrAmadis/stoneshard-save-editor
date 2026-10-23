@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using StoneshardSaveEditor.GameData;
@@ -19,6 +20,10 @@ public static partial class Names
             _ => $"Autosave {m.Groups[2].Value}",
         };
     }
+
+    /// <summary>A treatise volume as the game writes it: 1 → "I", 4 → "IV".</summary>
+    public static string Roman(int volume) =>
+        volume is >= 1 and <= 9 ? new[] { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX" }[volume - 1] : volume.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Names joined for a sentence: "A", "A and B", "A, B and C".</summary>
     public static string List(IReadOnlyList<string> names) =>

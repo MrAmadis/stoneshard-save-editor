@@ -7,6 +7,7 @@ namespace StoneshardSaveEditor.Tests.Editing;
 public class SkillRulesTests
 {
     // Synthetic tree: A (tier 1) → B, A → C, B → D; E needs both B and C (a shared bar in the game).
+    // A skill's lock is its tier's book (session D); its lines are the skills it needs.
     private static readonly SkillRules Rules = new(
         new Dictionary<string, string[]> { ["A"] = [], ["B"] = ["A"], ["C"] = ["A"], ["D"] = ["B"], ["E"] = ["B", "C"] },
         _ => ["A"]);
@@ -15,29 +16,27 @@ public class SkillRulesTests
         "ABCDE".Select(c => new SkillState(c.ToString(), learned.Contains(c), locked.Contains(c))).ToList();
 
     [Fact]
-    public void Learning_A_unlocks_B_and_C()
+    public void A_first_tier_skill_is_learnable_while_its_tree_is_open()
     {
-        var state = State(learned: "", locked: "BCDE");
-
-        Assert.True(Rules.CanLearn("A", state));
-        Assert.Equal(new[] { "B", "C" }, Rules.ToUnlockAfterLearn("A", state).Order());
+        Assert.True(Rules.CanLearn("A", State(learned: "", locked: "BCDE")));
+        Assert.False(Rules.CanLearn("A", State(learned: "", locked: "ABCDE")));
+        Assert.False(Rules.CanLearn("A", State(learned: "A", locked: "")));
     }
 
     [Fact]
-    public void Locked_D_cannot_be_learned()
+    public void A_skill_needs_its_tier_opened_by_the_book_and_its_lines_learned()
     {
-        var state = State(learned: "A", locked: "DE");
-
-        Assert.False(Rules.CanLearn("D", state));
-        Assert.True(Rules.CanLearn("B", state));
-        Assert.False(Rules.CanLearn("A", state));
+        // Session D: Shield Bash stayed shut with both its skills learned until the second volume was read.
+        Assert.False(Rules.CanLearn("B", State(learned: "A", locked: "BCDE")));
+        Assert.True(Rules.CanLearn("B", State(learned: "A", locked: "DE")));
+        Assert.False(Rules.CanLearn("D", State(learned: "A", locked: "")));
     }
 
     [Fact]
-    public void A_skill_needing_two_unlocks_only_when_both_are_learned()
+    public void A_skill_needing_two_waits_for_both()
     {
-        Assert.Equal(new[] { "D" }, Rules.ToUnlockAfterLearn("B", State(learned: "A", locked: "DE")));
-        Assert.Equal(new[] { "D", "E" }, Rules.ToUnlockAfterLearn("B", State(learned: "AC", locked: "DE")).Order());
+        Assert.False(Rules.CanLearn("E", State(learned: "AB", locked: "")));
+        Assert.True(Rules.CanLearn("E", State(learned: "ABC", locked: "")));
     }
 
     [Fact]
@@ -50,23 +49,13 @@ public class SkillRulesTests
     }
 
     [Fact]
-    public void Unlearning_A_relocks_unlearned_B_and_C()
+    public void Requirements_are_listed_for_tooltips()
     {
-        var state = State(learned: "A", locked: "DE");
-
-        Assert.Null(Rules.BlockingDependent("A", state));
-        Assert.Equal(new[] { "B", "C" }, Rules.ToRelockAfterUnlearn("A", state).Order());
+        Assert.Equal(new[] { "B", "C" }, Rules.RequirementsOf("E"));
+        Assert.Empty(Rules.RequirementsOf("A"));
     }
 
-    [Fact]
-    public void After_respec_only_first_tier_stays_unlocked()
-    {
-        var state = State(learned: "", locked: "E");
-
-        Assert.Equal(new[] { "B", "C", "D" }, Rules.ToRelockAfterRespec(state).Order());
-    }
-
-    /// <summary>Velmir's Greataxes: Hooking Chop, Shieldbreaker and Dismember open the second tier (in-game finding A3).</summary>
+    /// <summary>Velmir's Greataxes: Hooking Chop, Shieldbreaker and Dismember lead to the second tier (in-game finding A3).</summary>
     private static readonly SkillRules Greataxes = new(
         new Dictionary<string, string[]>
         {
@@ -80,23 +69,26 @@ public class SkillRulesTests
     private static SkillState Skill(SkillsEditor skills, string obj) => skills.Read().Single(x => x.Object == obj);
 
     [Fact]
-    public void With_rules_learning_spends_a_point_and_unlocking_follows()
+    public void With_rules_learning_spends_a_point_and_opens_nothing()
     {
         var session = Sessions.OpenVelmir();
         var skills = new SkillsEditor(session);
         skills.Unlearn("o_skill_wide_cut_ico", refundPoint: false);
-        skills.Lock(["o_pass_skill_fatal_hit"]);
-        new CharacterEditor(session).Set(CharacterField.AbilityPoints, 1);
+        new CharacterEditor(session).Set(CharacterField.AbilityPoints, 2);
 
         skills.Learn("o_skill_wide_cut_ico", Greataxes);
 
-        Assert.Equal("0.0", Sp(session));
-        Assert.False(Skill(skills, "o_pass_skill_fatal_hit").Locked);
+        Assert.Equal("1.0", Sp(session));
+        Assert.True(Skill(skills, "o_pass_skill_fatal_hit").Locked); // Velmir hasn't read Greataxes II
         Assert.Throws<EditRejectedException>(() => skills.Learn("o_pass_skill_fatal_hit", Greataxes));
+
+        skills.Unlock(["o_pass_skill_fatal_hit"]); // as reading the second volume does
+        skills.Learn("o_pass_skill_fatal_hit", Greataxes);
+        Assert.Equal("0.0", Sp(session));
     }
 
     [Fact]
-    public void With_rules_unlearning_is_blocked_by_a_learned_dependent_then_relocks()
+    public void With_rules_unlearning_is_blocked_by_a_learned_dependent_and_keeps_the_locks()
     {
         var session = Sessions.OpenVelmir();
         var skills = new SkillsEditor(session);
@@ -108,7 +100,7 @@ public class SkillRulesTests
         skills.Unlearn("o_pass_skill_fatal_hit", Greataxes);
         skills.Unlearn("o_skill_wide_cut_ico", Greataxes);
 
-        Assert.True(Skill(skills, "o_pass_skill_fatal_hit").Locked);
+        Assert.False(Skill(skills, "o_pass_skill_fatal_hit").Locked); // learning made it unlocked; unlearning leaves the book's lock alone
         Assert.Equal("2.0", Sp(session));
     }
 

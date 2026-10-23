@@ -53,14 +53,39 @@ public sealed partial class SkillCatalog
     private readonly Dictionary<string, SkillTree> _treeOf;
     private readonly Dictionary<string, string[]> _unlocks;
     private readonly Dictionary<string, TreeLayout> _layouts;
+    private readonly Dictionary<string, int> _volumes;
 
-    private SkillCatalog(IReadOnlyList<SkillTree> trees, Dictionary<string, string[]> unlocks, Dictionary<string, TreeLayout> layouts)
+    private SkillCatalog(IReadOnlyList<SkillTree> trees, Dictionary<string, string[]> unlocks, Dictionary<string, TreeLayout> layouts,
+        Dictionary<string, int> volumes)
     {
         Trees = trees;
         _treeOf = trees.SelectMany(t => t.Skills.Select(s => (s.Object, t))).ToDictionary(x => x.Object, x => x.t);
         _unlocks = unlocks;
         _layouts = layouts;
+        _volumes = volumes;
     }
+
+    /// <summary>How many treatise volumes the tree has (the game's items <c>treatise_&lt;prefix&gt;1</c>, <c>2</c>, …).</summary>
+    public int Volumes(string treeId) => _volumes.GetValueOrDefault(treeId);
+
+    /// <summary>
+    /// The skills a treatise volume opens: one row each (session B: Pyromancy II–IV). A tree with fewer volumes than rows
+    /// (Survival) has its first rows open from the start, so its volumes open the last rows.
+    /// </summary>
+    public IReadOnlyList<string> TierSkills(string treeId, int volume) =>
+        Layout(treeId)?.Skills.Where(s => s.Value.Row == volume - 1 + Offset(treeId)).Select(s => s.Key).ToList() ?? [];
+
+    /// <summary>The treatise volume that opens this skill's row, or null when no book is involved.</summary>
+    public int? VolumeOf(string obj)
+    {
+        if (!_treeOf.TryGetValue(obj, out var tree) || Layout(tree.Id)?.Skills.GetValueOrDefault(obj) is not { } at)
+            return null;
+        var volume = at.Row + 1 - Offset(tree.Id);
+        return volume >= 1 && volume <= Volumes(tree.Id) ? volume : null;
+    }
+
+    private int Offset(string treeId) =>
+        Layout(treeId) is { } layout ? Math.Max(0, layout.Skills.Values.Max(p => p.Row) + 1 - Volumes(treeId)) : 0;
 
     public IReadOnlyList<SkillTree> Trees { get; }
 
@@ -148,7 +173,9 @@ public sealed partial class SkillCatalog
         }
         trees.Add(Tree(BasicTree, names.Where(SkillsEditor.Innate.Contains).Select(n => Info(n, BasicTree)).ToList()));
 
-        return new SkillCatalog(trees, LoadUnlocks(), LoadLayouts());
+        var volumes = trees.Where(t => t.TreatisePrefix is not null).ToDictionary(t => t.Id,
+            t => Enumerable.Range(1, 9).TakeWhile(n => tables.ItemsStats.Find($"treatise_{t.TreatisePrefix}{n}") is not null).Count());
+        return new SkillCatalog(trees, LoadUnlocks(), LoadLayouts(), volumes);
     }
 
     private static SkillTree Tree(string id, IReadOnlyList<SkillInfo> skills)

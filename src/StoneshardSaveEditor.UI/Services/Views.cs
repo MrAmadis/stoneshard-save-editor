@@ -13,12 +13,15 @@ public sealed record CharacterView(string Folder, string Name, string? ClassName
 /// <param name="Available">Learnable under the game rules: everything it needs is learned (first tier: its tree is open).
 /// Without rules loaded, the save's own flag.</param>
 /// <param name="Requires">The skills this one needs, as object names (empty for the first tier or without a layout).</param>
+/// <param name="Volume">The treatise volume that opens this skill's row, or null when no book is involved.</param>
 public sealed record SkillView(
     string Object, string DisplayName, string Sprite, bool Passive, bool Learned, bool Locked, bool Available, int? Col, int? Row,
-    IReadOnlyList<string> Requires);
+    IReadOnlyList<string> Requires, int? Volume);
 
+/// <param name="NextVolume">In an open tree, the treatise volume whose row is still locked, or null when every row is open.</param>
 public sealed record SkillTreeView(
-    string Id, string DisplayName, string? TreatisePrefix, bool Open, int LearnedCount, bool CanUnlock, IReadOnlyList<SkillView> Skills);
+    string Id, string DisplayName, string? TreatisePrefix, bool Open, int LearnedCount, bool CanUnlock, IReadOnlyList<SkillView> Skills,
+    int? NextVolume);
 
 public sealed record ReputationView(string Name, string LocationKey, double Value);
 

@@ -228,23 +228,11 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         skills.Unlearn(obj, gameRules);
     });
 
-    /// <param name="rules">Follow game rules: afterwards only first-tier skills stay available.</param>
-    public SessionView RespecAll(bool rules = false) => Edit(s =>
-    {
-        var skills = new SkillsEditor(s);
-        skills.RespecAll();
-        if (rules && RulesFor(s) is { } gameRules)
-            skills.Lock(gameRules.ToRelockAfterRespec(skills.Read()));
-    });
+    /// <summary>Unlearns every bought skill and refunds the points; the trees' books stay read.</summary>
+    public SessionView RespecAll() => Edit(s => new SkillsEditor(s).RespecAll());
 
-    public SessionView RefundTree(string treeId, bool rules = false) => Edit(s =>
-    {
-        var skills = new SkillsEditor(s);
-        var inTree = Tree(s, treeId).Skills.Select(k => k.Object).ToHashSet();
-        skills.RefundTree(inTree);
-        if (rules && RulesFor(s) is { } gameRules)
-            skills.Lock(gameRules.ToRelockAfterRespec(skills.Read()).Where(inTree.Contains));
-    });
+    public SessionView RefundTree(string treeId) =>
+        Edit(s => new SkillsEditor(s).RefundTree(Tree(s, treeId).Skills.Select(k => k.Object)));
 
     /// <summary>Opens a closed tree the way reading its first treatise does (observed in-game).</summary>
     public SessionView UnlockTree(string treeId) => Edit(s =>
@@ -255,6 +243,24 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             throw new EditRejectedException($"There's no unlock data for {tree.DisplayName} yet");
         new SkillsEditor(s).UnlockTree(firstTier, $"treatise_{tree.TreatisePrefix}1");
     });
+
+    /// <summary>Opens the next locked row of an open tree the way reading its next treatise volume does.</summary>
+    public SessionView UnlockNextTier(string treeId) => Edit(s =>
+    {
+        var tree = Tree(s, treeId);
+        var catalog = SkillsFor(s)!;
+        var state = SkillsEditor.ReadFrom(s.Root).ToDictionary(x => x.Object);
+        if (NextVolume(catalog, treeId, state) is not { } volume)
+            throw new EditRejectedException($"Every tier of {tree.DisplayName} is already open");
+        new SkillsEditor(s).UnlockTree(catalog.TierSkills(treeId, volume), $"treatise_{tree.TreatisePrefix}{volume}");
+    });
+
+    /// <summary>The first treatise volume whose row still has a locked skill.</summary>
+    private static int? NextVolume(SkillCatalog catalog, string treeId, IReadOnlyDictionary<string, SkillState> state) =>
+        Enumerable.Range(1, catalog.Volumes(treeId))
+            .Where(v => catalog.TierSkills(treeId, v).Any(o => state.GetValueOrDefault(o)?.Locked ?? false))
+            .Select(v => (int?)v)
+            .FirstOrDefault();
 
     /// <summary>The name players see for an inventory item ("o_inv_salve" → "Salve").</summary>
     public string ItemName(string name) =>
@@ -341,11 +347,11 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
                 var locked = current?.Locked ?? true;
                 var available = !learned && (rules?.CanLearn(k.Object, stateList) ?? !locked);
                 return new SkillView(k.Object, k.DisplayName, k.Sprite, k.Passive, learned, locked, available, at?.Col, at?.Row,
-                    at?.Requires ?? []);
+                    at?.Requires ?? [], catalog.VolumeOf(k.Object));
             }).ToList();
             var open = skills.Any(k => k.Learned || !k.Locked);
             return new SkillTreeView(t.Id, t.DisplayName, t.TreatisePrefix, open, skills.Count(k => k.Learned),
-                !open && catalog.UnlockSet(t.Id).Count > 0, skills);
+                !open && catalog.UnlockSet(t.Id).Count > 0, skills, open ? NextVolume(catalog, t.Id, state) : null);
         }).ToList() ?? [];
 
         var rulesAvailable = rules is not null;

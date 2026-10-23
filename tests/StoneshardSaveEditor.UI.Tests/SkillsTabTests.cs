@@ -141,6 +141,25 @@ public class SkillsTabTests
     }
 
     [Fact]
+    public void Unlock_next_tier_reads_the_next_volume()
+    {
+        var (h, ctx, cut) = OpenSkills();
+        using var _ctx = ctx;
+        cut.Find(".tree-list [data-tree='2haxe']").Click();
+        Assert.Equal("Unlock tier II", cut.Find("button.unlock-tier").TextContent);
+
+        cut.Find("button.unlock-tier").Click();
+
+        var greataxes = h.Editor.Current.Trees.Single(t => t.Id == "2haxe");
+        Assert.All(greataxes.Skills.Where(s => s.Row == 1), s => Assert.False(s.Locked, s.Object));
+        Assert.All(greataxes.Skills.Where(s => s.Row == 2), s => Assert.True(s.Locked, s.Object));
+        Assert.Equal("Unlock tier III", cut.Find("button.unlock-tier").TextContent);
+        Assert.Equal(3, greataxes.NextVolume);
+        cut.Find("button.unlock-tier").Click();
+        Assert.Empty(cut.FindAll("button.unlock-tier"));
+    }
+
+    [Fact]
     public void With_rules_a_locked_skill_says_what_it_needs()
     {
         var (_, ctx, cut) = OpenSkills();
@@ -150,7 +169,7 @@ public class SkillsTabTests
         var makeSpace = cut.Find(".skill[data-skill='o_skill_killing_swing_ico']");
 
         Assert.True(makeSpace.HasAttribute("disabled"));
-        Assert.Equal("Locked: learn Fatal Strike and Finish 'Em! first", makeSpace.GetAttribute("title"));
+        Assert.Equal("Locked: needs Greataxes Treatise III", makeSpace.GetAttribute("title"));
     }
 
     [Fact]
@@ -160,7 +179,11 @@ public class SkillsTabTests
         using var _ctx = ctx;
         cut.Find(".skills-bar [data-field='AbilityPoints'] input").Change("1");
         cut.Find(".tree-list [data-tree='2haxe']").Click();
-        // The save still marks Fatal Strike locked (the game recomputes locks on load), but its three requirements are learned.
+        // Fatal Strike's three skills are learned, but Velmir hasn't read Greataxes II (session D).
+        Assert.Contains("locked", Skill(cut, "Fatal Strike").ClassList);
+        Assert.Equal("Locked: needs Greataxes Treatise II", Skill(cut, "Fatal Strike").GetAttribute("title"));
+
+        cut.Find("button.unlock-tier").Click();
         Assert.Contains("available", Skill(cut, "Fatal Strike").ClassList);
         Assert.False(Skill(cut, "Fatal Strike").HasAttribute("disabled"));
 

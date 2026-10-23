@@ -20,7 +20,7 @@
     @Points(CharacterField.AbilityPoints, "Ability points")
     @Points(CharacterField.StatPoints, "Stat points")
     <button class="btn danger respec" disabled="@(Session.Trees.Count == 0)" @onclick="() => _confirmRespec = true">Respec all</button>
-    <button class="btn refund-tree" disabled="@(tree is null || tree.LearnedCount == 0)" @onclick="() => Edit(() => EditorService.RefundTree(tree!.Id, Rules))">Refund this tree</button>
+    <button class="btn refund-tree" disabled="@(tree is null || tree.LearnedCount == 0)" @onclick="() => Edit(() => EditorService.RefundTree(tree!.Id))">Refund this tree</button>
     <label class="rules-toggle" title="@(Session.RulesAvailable ? "Prerequisites and point costs work as in the game" : "Tree rules not loaded yet")">
         <input type="checkbox" class="rules" checked="@Rules" disabled="@(!Session.RulesAvailable)" @onchange="e => _rules = e.Value is true" />
         Follow game rules
@@ -46,6 +46,11 @@ else
 
         <section class="panel tree-view">
             <h3>@tree.DisplayName@(tree.Open ? "" : " 🔒")</h3>
+            @if (tree.Open && tree.NextVolume is { } next)
+            {
+                <button class="btn gold unlock-tier" title="As reading @tree.DisplayName Treatise @Names.Roman(next)"
+                        @onclick="() => Edit(() => EditorService.UnlockNextTier(tree.Id))">Unlock tier @Names.Roman(next)</button>
+            }
             @if (!tree.Open)
             {
                 <p class="muted">This tree is closed, as if you never read its treatise.</p>
@@ -164,6 +169,7 @@ else
         (_, true, _, false) => "Learned. Click to unlearn",
         (_, _, false, true) => "Click to learn for 1 ability point",
         (_, _, false, false) => "Click to learn",
+        (_, _, true, true) when skill.Locked && skill.Volume is { } volume => $"Locked: needs {tree.DisplayName} Treatise {Names.Roman(volume)}",
         (_, _, true, true) => skill.Requires.Count > 0 ? $"Locked: learn {Names.List(NeedNames(tree, skill))} first" : "Locked: learn the skills before it first",
         _ => "Locked in the game. Click to learn it anyway",
     };
@@ -179,6 +185,6 @@ else
     private void Respec()
     {
         _confirmRespec = false;
-        Edit(() => EditorService.RespecAll(Rules));
+        Edit(() => EditorService.RespecAll());
     }
 }
