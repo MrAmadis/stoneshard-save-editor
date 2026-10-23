@@ -113,6 +113,43 @@ public class ExperimentsTests
         Assert.All(Purses(Load(root, made[1].Folder)), p => Assert.Equal(p.Coins, p.Cached));
     }
 
+    private static GmArray Named(GmObject save, string name) =>
+        ((GmArray)save["inventoryDataList"]!).Items.Cast<GmArray>().Single(e => ((GmString)e.Items[0]).Value == name);
+
+    private static string SlotOf(GmArray entry) => ((GmString)entry.Items[9]).Value;
+
+    private static double Field(GmArray entry, int field) => ((GmNumber)entry.Items[field]).Value;
+
+    [Fact]
+    public void Session_G_builds_the_moved_gear_characters()
+    {
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal(new[] { "Osbrook", "Mannshire" }, made.Select(m => m.Label));
+        var g1 = Load(root, made[0].Folder);
+        var hood = Named(g1, "Hood");
+        Assert.Equal("o_inv_head", SlotOf(hood));
+        Assert.Equal(-4, Field(hood, 2));
+        Assert.True(hood.Items[7] is GmBool { Value: true });
+        Assert.Equal("N/A", SlotOf(Named(g1, "Flat Kettle Helmet")));
+        Assert.Equal("o_inv_ring_1", SlotOf(Named(g1, "Antique Copper Ring")));
+        Assert.Equal("o_inv_ring_2", SlotOf(Named(g1, "Velmir Ring")));
+        var crossbow = Named(g1, "Guard Crossbow");
+        Assert.Equal(("o_inv_right_hand", 0.0), (SlotOf(crossbow), Field(crossbow, 8)));
+        var bolts = Named(g1, "o_inv_leafshaped_bolts");
+        Assert.Equal(("o_inv_left_hand", 0.0, 19.0), (SlotOf(bolts), Field(bolts, 8), Field(bolts, 6)));
+        var voulge = Named(g1, "Voulge");
+        Assert.Equal(("o_inv_right_hand", 1.0, 0.0), (SlotOf(voulge), Field(voulge, 8), Field(voulge, 7)));
+
+        var g2 = Load(root, made[1].Folder);
+        Assert.All(new[] { "Makeshift Sling", "o_inv_ammo_bullet", "Lute", "Pickaxe", "Chain", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch" },
+            name => Assert.Equal("N/A", SlotOf(Named(g2, name))));
+    }
+
     [Fact]
     public void Session_D_builds_the_rules_check_character()
     {

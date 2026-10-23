@@ -87,6 +87,50 @@ public static class Experiments
     }
 
     /// <summary>
+    /// Test characters for in-game session G (inventory drag and drop, spec §7): does the game take gear the editor
+    /// moved, and where do the kinds still open (slings, lutes, picks, chains, tools) go? The catalog can't build wands yet.
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionG(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook",
+            "G1 (gear moved by the editor: helmet off, Hood on, rings swapped, Voulge and crossbow swapped weapon sets with the bolts " +
+            "following, torch and purse moved): check the gear shows where listed, armor and stats in the character screen match " +
+            "the worn gear, both weapon sets work, and nothing doubled or disappeared",
+            s => MovedGear(s, game));
+        batch.Make("Mannshire",
+            "G2 (sling and bullets, lute, pickaxe, chain, sickle, bow and arrows, torch in the bag): equip each item in the game and " +
+            "note which slot it goes to; does the sling take the bullets as the crossbow takes bolts?",
+            s => FillBagWith(s, game, OpenKinds));
+        return batch.Results;
+    }
+
+    /// <summary>Biggest first, so first-fit packs all nine into the 10 × 5 bag.</summary>
+    private static readonly string[] OpenKinds =
+        ["Lute", "Pickaxe", "Chain", "Makeshift Sling", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch", "o_inv_ammo_bullet"];
+
+    private static void MovedGear(SaveSession s, GameServices game)
+    {
+        var inv = new InventoryEditor(s, game.Shapes);
+        int Index(string name) => inv.Read().First(i => i.Name == name).Index;
+        void ToFreeSpot(string name)
+        {
+            var item = inv.Read().First(i => i.Name == name);
+            var spot = inv.FirstFit(item.W, item.H) ?? throw new InvalidOperationException($"No room in the bag for {name}");
+            inv.Move(item.Index, ItemPlace.InBag(spot.X, spot.Y));
+        }
+
+        ToFreeSpot("Flat Kettle Helmet");
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Hood", s.Root)), ItemPlace.Worn(GearRules.Head));
+        inv.Move(Index("Velmir Ring"), ItemPlace.Worn(GearRules.Ring2));
+        ToFreeSpot("o_inv_leafshaped_bolts");
+        inv.Move(Index("Voulge"), ItemPlace.Worn(GearRules.RightHand, 1));
+        inv.Move(Index("o_inv_leafshaped_bolts"), ItemPlace.Worn(GearRules.LeftHand, 0));
+        ToFreeSpot("o_inv_torch");
+        ToFreeSpot("o_inv_moneybag");
+    }
+
+    /// <summary>
     /// Puts every save of an existing test character back to session D's start: every treatise read, only starting
     /// skills learned and 100 ability points. Each save is backed up first.
     /// </summary>
