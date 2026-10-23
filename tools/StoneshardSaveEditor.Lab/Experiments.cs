@@ -94,7 +94,7 @@ public static class Experiments
     {
         var batch = Batch.Start(root, backups, probe);
         batch.Make("Osbrook",
-            "G1 (gear moved by the editor: helmet off, Hood on, rings swapped, Voulge and crossbow swapped weapon sets with the bolts " +
+            "G1 (bag emptied but for a purse and a torch; gear moved by the editor: helmet off, Hood on, rings swapped, Voulge and crossbow swapped weapon sets with the bolts " +
             "following, torch and purse moved): check the gear shows where listed, armor and stats in the character screen match " +
             "the worn gear, both weapon sets work, and nothing doubled or disappeared",
             s => MovedGear(s, game));
@@ -112,6 +112,11 @@ public static class Experiments
     private static void MovedGear(SaveSession s, GameServices game)
     {
         var inv = new InventoryEditor(s, game.Shapes);
+        // Room for every move whatever Velmir carries: keep one purse and one torch for the rearranging, drop the rest.
+        var keep = new[] { "o_inv_moneybag", "o_inv_torch" }
+            .Select(n => inv.Read().FirstOrDefault(i => i.Name == n && !i.Equipped)?.Index).OfType<int>().ToHashSet();
+        foreach (var item in inv.Read().Where(i => !i.Equipped && !keep.Contains(i.Index)).OrderByDescending(i => i.Index))
+            inv.Delete(item.Index);
         int Index(string name) => inv.Read().First(i => i.Name == name).Index;
         void ToFreeSpot(string name)
         {

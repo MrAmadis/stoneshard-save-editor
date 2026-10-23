@@ -151,6 +151,27 @@ public class ExperimentsTests
     }
 
     [Fact]
+    public void Session_G_works_when_the_source_bag_is_full()
+    {
+        // The live Velmir carries more than the fixture; the first live run found no room to move the torch.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+        var slot = new SaveLocator(root).Scan().Single(c => c.Folder == "character_2").Slots.Single(s => s.SlotFolder == "exitsave_1");
+        var source = SaveSession.Open(slot);
+        var inv = new InventoryEditor(source, Game.Value.Shapes);
+        var torch = inv.Read().First(i => i.Name == "o_inv_torch").Index;
+        for (var i = 0; i < 50 && inv.FirstFit(1, 3) is not null; i++)
+            inv.Duplicate(torch);
+        Assert.Null(inv.FirstFit(1, 3));
+        Assert.Equal(SaveResult.Saved, source.Save(backups, new FakeProbe(false)));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal("o_inv_head", SlotOf(Named(Load(root, made[0].Folder), "Hood")));
+    }
+
+    [Fact]
     public void Session_D_builds_the_rules_check_character()
     {
         // Every treatise read, so the lock flags are out of the way and only the lines decide what can be learned.
