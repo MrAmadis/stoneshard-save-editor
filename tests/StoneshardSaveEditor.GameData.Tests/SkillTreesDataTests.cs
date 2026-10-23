@@ -103,6 +103,17 @@ public class SkillTreesDataTests
     [InlineData("athletic", "Disengage, Dash", "Elusiveness", true)]
     [InlineData("2haxe", "Hooking Chop, Shieldbreaker", "Fatal Strike", false)]
     [InlineData("sword", "Cleaving Strike", "Gloat", true)]
+    // Session E.
+    [InlineData("axe", "Mutilating Lunge, Ferocity, Cut Through", "Reprisal", false)]
+    [InlineData("axe", "Mutilating Lunge, Ferocity, Cut Through, No Mercy", "Reprisal", true)]
+    [InlineData("2hsword", "Revanche, Feast of Steel", "Taste of Victory", false)]
+    [InlineData("2hsword", "Revanche, Feast of Steel, Hewing Strike, Recklessness", "Taste of Victory", true)]
+    [InlineData("armor", "Brace for Impact!, Flexible Defense", "Battering Ram", true)]
+    [InlineData("arcanistics", "Dimensional Shift", "Schism", true)]
+    [InlineData("arcanistics", "Dimensional Shift", "Transcendental Anchoring", true)]
+    [InlineData("arcanistics", "Dimensional Shift", "Time Echo", false)]
+    [InlineData("arcanistics", "Dimensional Shift", "Aether Shield", false)]
+    [InlineData("arcanistics", "Dimensional Shift, Arcane Might", "Aether Shield", true)]
     public void Lines_decide_what_is_learnable_once_every_book_is_read(string treeId, string learned, string skill, bool learnable)
     {
         var tree = TreesWithTreatise().Single(t => t.Id == treeId);

@@ -104,10 +104,12 @@ The owner asked to fix everything possible; all but the last deferred finding ar
 - The single-file build stops with an error if the SDK no longer hands over the static web assets.
 - Test characters stay within `character_3`–`character_10`; beyond that the Lab refuses. A clone whose source is missing creates nothing, and the Lab copies Velmir's newest save once his exit save is consumed.
 - `EditorService` reads the open save under its lock everywhere.
-- "Follow game rules" asked for one skill too many in Shields, Staves and Athletics, and too few for Regroup. Session D (in-game findings) showed lines read like wiring: plain joins mean any one, dots mean all. Requirements are now conditions that must all hold, each met by any one of its skills, and the trees are drawn with the game's dots.
+- "Follow game rules" asked for one skill too many in Shields, Staves and Athletics, and too few for Regroup. Sessions D and E (in-game findings) showed how lines read: a dot needs every skill whose line runs into it, any other skill needs any one. Requirements are now conditions that must all hold, each met by any one of its skills, and the trees are drawn with the game's dots.
 
 ## Session D (2026-10-23)
 
 - Ruling: a tier needs its treatise volume as well as its lines; the save's `Locked` flag is that gate, and learning or unlearning never changes it ("Unlock tier" reads the next volume) — cost if wrong: none, seen in-game (D1).
-- Ruling: four patterns not yet seen in-game (Axes, Greatswords, Armored Combat, Arcanistics) follow the same reading of the screenshots — cost if wrong: rules mode allows or refuses a skill the game wouldn't; rules-off editing is unaffected.
+- Ruling: session D read a plain join inside a dot's lines as "either" (wiring); session E's four checks refuted that for Axes, Greatswords and Arcanistics, so a dot needs every skill whose line runs into it, and which lines run where is read from the corners where lines meet bars — cost if wrong: none for the checked skills.
+- Ruling: Greatmaces' and Electromancy's last rows, Heroic Charge, Courage, Mana Crystal, Huntmaster and Will to Survive are re-read by that rule without an in-game check — cost if wrong: rules mode allows or refuses a skill the game wouldn't; rules-off editing is unaffected.
+- Ruling: where a skill needing one line and a dot share a skill on the same side (Greatswords' Taste of Victory beside Heroic Charge's dot), the drawing gives them separate lines, so the skill never seems to hang from the dot's other lines — cost if wrong: one extra line from that skill.
 - Ruling: the layout keeps rows centred with equal spacing, unlike the game's half-column grid; where that leaves a dot off its skill (Arcanistics' Aether Shield, Dual Wielding's Concentration), the line leaving the dot bends to the skill — cost if wrong: a drawing differs slightly from the game's.

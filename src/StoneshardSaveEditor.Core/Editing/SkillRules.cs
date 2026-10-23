@@ -5,9 +5,9 @@ namespace StoneshardSaveEditor.Core.Editing;
 /// <list type="bullet">
 /// <item>its tier: the save's lock flag, cleared by reading that tree's treatise volume (session B: Pyromancy II–IV each
 /// opened one row; session D: Shield Bash stayed shut with its skills learned until the second volume was read);</item>
-/// <item>its lines, read like wiring (session D): lines that join without a dot form one connection that any of its
-/// skills satisfies (Shield Bash opened with Breakthrough alone); a junction dot needs every connection that comes into
-/// it (Regroup needed all three; Fatal Strike all of Greataxes' first row).</item>
+/// <item>its lines (sessions D and E): a skill with a dot on its line needs every skill whose line runs into the dot
+/// (Regroup needed all three; Reprisal all four of Axes' first row); any other skill needs any one of the skills whose
+/// lines run into it (Shield Bash opened with Breakthrough alone).</item>
 /// </list>
 /// So a skill's requirement is a list of conditions that must all hold, each satisfied by any one of its skills.
 /// Learning or unlearning never changes the locks; only books do.

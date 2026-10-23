@@ -4,12 +4,13 @@ using System.Text;
 namespace StoneshardSaveEditor.UI.Services;
 
 /// <summary>
-/// A skill tree drawn like the game's: rows centred, and requirements drawn as wiring (in-game findings, session D).
+/// A skill tree drawn like the game's: rows centred, and requirements drawn as lines (in-game findings, sessions D and E).
 /// Each condition is a wire: the skills that meet it drop onto it and the skills that need only it hang from it, so
 /// lines that join without a dot mean any one of them will do. Where skills need several conditions, their wires meet
-/// at a dot, each from a side of its own (left, right or straight from above), and one line leaves the dot: down to
-/// the skill, or to a bar over the skills that share those conditions. A skill that feeds several wires leaves for the
-/// later ones from its side, and wires that would touch or cross get lanes of their own.
+/// at a dot, from the left, the right or straight from above, and one line leaves the dot: down to the skill, or to a
+/// bar over the skills that share those conditions. A skill hangs from a dot's wire only when no other wire comes into
+/// that dot from the same side, so it never seems to need the dot's other skills. A skill that feeds several wires
+/// leaves for the later ones from its side, and wires that would touch or cross get lanes of their own.
 /// </summary>
 public sealed class SkillTreeDrawing
 {
@@ -78,16 +79,18 @@ public sealed class SkillTreeDrawing
     }
 
     /// <summary>A condition: the skills that meet it, the skills needing only it, and the dots it leads to.</summary>
-    private sealed class Wire(string[] clause)
+    private sealed class Wire(string[] clause, IReadOnlyList<double> parentXs)
     {
         public string[] Clause { get; } = clause;
+        public IReadOnlyList<double> ParentXs { get; } = parentXs;
         public List<(string Parent, double X)> Branches { get; } = [];
         public List<(string Object, double X)> Children { get; } = [];
         public List<Dot> Dots { get; } = [];
 
-        /// <summary>Where it touches its skills and dots, but the dot given.</summary>
+        /// <summary>Where it touches its skills and dots, but the dot given (before branches are placed, the skills' middles).</summary>
         public IEnumerable<double> Points(Dot? except = null) =>
-            Branches.Select(b => b.X).Concat(Children.Select(c => c.X)).Concat(Dots.Where(d => d != except).Select(d => d.X));
+            (Branches.Count > 0 ? Branches.Select(b => b.X) : ParentXs).Concat(Children.Select(c => c.X))
+            .Concat(Dots.Where(d => d != except).Select(d => d.X));
 
         /// <summary>One skill straight above the one skill that needs it.</summary>
         public bool Straight => Dots.Count == 0 && Branches.Count == 1 && Children.Count == 1 && Branches[0].X == Children[0].X;
@@ -123,73 +126,126 @@ public sealed class SkillTreeDrawing
         var top = needing.SelectMany(s => s.Requires).SelectMany(c => c).Max(p => at[p].Top) + LinkStart;
         var bottom = at[needing[0].Object].Top;
 
-        var wires = new Dictionary<string, Wire>(StringComparer.Ordinal);
-        Wire WireFor(string[] clause)
+        static string Key(string[] clause) => string.Join(' ', clause.Order(StringComparer.Ordinal));
+        Wire WireFor(Dictionary<string, Wire> wires, string[] clause)
         {
-            var sorted = clause.Order(StringComparer.Ordinal).ToArray();
-            var key = string.Join(' ', sorted);
-            if (!wires.TryGetValue(key, out var wire))
-                wires[key] = wire = new Wire(sorted);
+            if (!wires.TryGetValue(Key(clause), out var wire))
+            {
+                var sorted = clause.Order(StringComparer.Ordinal).ToArray();
+                wires[Key(clause)] = wire = new Wire(sorted, sorted.Select(X).ToList());
+            }
             return wire;
         }
+        var plain = new Dictionary<string, Wire>(StringComparer.Ordinal);
         foreach (var s in needing.Where(s => s.Requires.Count == 1))
-            WireFor(s.Requires[0]).Children.Add((s.Object, X(s.Object)));
+            WireFor(plain, s.Requires[0]).Children.Add((s.Object, X(s.Object)));
         var dots = needing.Where(s => s.Requires.Count > 1)
-            .GroupBy(s => string.Join('+', s.Requires.Select(c => string.Join(' ', c.Order(StringComparer.Ordinal))).Order(StringComparer.Ordinal)))
+            .GroupBy(s => string.Join('+', s.Requires.Select(Key).Order(StringComparer.Ordinal)))
             .Select(g => new Dot(g.First().Requires.ToArray(), g.Select(s => (s.Object, X(s.Object))).ToList()))
             .ToList();
+        var intoDots = new Dictionary<string, Wire>(StringComparer.Ordinal);
         foreach (var dot in dots)
             foreach (var clause in dot.Needs)
             {
-                var wire = WireFor(clause);
+                var wire = WireFor(intoDots, clause);
                 wire.Dots.Add(dot);
                 dot.Wires.Add(wire);
             }
-
-        // A skill's first wire leaves from its middle (a wire to the skill right below it goes first); further wires
-        // leave from its side, towards where they go.
-        var uses = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var wire in wires.Values
-                     .OrderBy(w => w.Children.Any(c => w.Clause.Any(p => X(p) == c.X)) ? 0 : 1)
-                     .ThenBy(w => w.Children.Select(c => c.X).Concat(w.Dots.Select(d => d.X)).Min()))
-        {
-            var centre = wire.Clause.Select(X).Concat(wire.Children.Select(c => c.X)).Concat(wire.Dots.Select(d => d.X)).Average();
-            foreach (var p in wire.Clause)
-            {
-                var k = uses.GetValueOrDefault(p);
-                uses[p] = k + 1;
-                wire.Branches.Add((p, X(p) + (centre >= X(p) ? 1 : -1) * BranchOffset * k));
-            }
-        }
         foreach (var dot in dots)
             dot.X = PlaceDot(dot);
 
+        // A dot's wire also carries the skills needing only that condition when each of its dots still has every wire
+        // coming in from a side of its own.
+        var wires = plain.Values.ToList();
+        foreach (var (key, wire) in intoDots)
+        {
+            if (plain.TryGetValue(key, out var shared))
+            {
+                shared.Dots.AddRange(wire.Dots);
+                foreach (var dot in wire.Dots)
+                    dot.Wires[dot.Wires.IndexOf(wire)] = shared;
+                if (shared.Dots.All(d => Reaches(d, d.X)))
+                    continue;
+                shared.Dots.RemoveAll(wire.Dots.Contains);
+                foreach (var dot in wire.Dots)
+                    dot.Wires[dot.Wires.IndexOf(shared)] = wire;
+            }
+            wires.Add(wire);
+        }
+
+        // A skill's first wire leaves from its middle (a wire to the skill right below it goes first); further wires
+        // leave from its side, towards where they go unless the other side clashes less.
+        var uses = wires.SelectMany(w => w.Clause.Select(p => (Wire: w, Parent: p)))
+            .GroupBy(u => u.Parent)
+            .ToDictionary(g => g.Key, g => g
+                .OrderBy(u => u.Wire.Children.Any(c => c.X == X(g.Key)) ? 0 : 1)
+                .ThenBy(u => u.Wire.Children.Select(c => c.X).Concat(u.Wire.Dots.Select(d => d.X)).Min())
+                .Select(u => u.Wire)
+                .ToList());
+        var later = uses.SelectMany(u => u.Value.Skip(1).Select(w => (Wire: w, Parent: u.Key))).ToList();
+        void Branch(int flips)
+        {
+            foreach (var wire in wires)
+            {
+                wire.Branches.Clear();
+                var centre = wire.Clause.Select(X).Concat(wire.Children.Select(c => c.X)).Concat(wire.Dots.Select(d => d.X)).Average();
+                foreach (var p in wire.Clause)
+                {
+                    var side = centre >= X(p) ? 1 : -1;
+                    var i = later.IndexOf((wire, p));
+                    if (i >= 0 && (flips & (1 << i)) != 0)
+                        side = -side;
+                    wire.Branches.Add((p, X(p) + side * BranchOffset * uses[p].IndexOf(wire)));
+                }
+            }
+        }
+
         // Lanes: straight lines need none; each group of wires meeting at dots shares one, and a dot's bar goes below it.
-        var placed = new List<Segment>();
-        var lanes = new List<double>();
-        var lane = new Dictionary<Wire, double>();
-        var fan = new Dictionary<Dot, double>();
-        foreach (var wire in wires.Values.Where(w => w.Straight))
-            placed.AddRange(Lines(wire, 0, Above, Below));
-        foreach (var group in Groups(wires.Values.Where(w => !w.Straight))
-                     .OrderBy(g => g.Any(w => w.Dots.Count > 0) ? 0 : 1).ThenBy(g => g.SelectMany(w => w.Points()).Min()))
+        (int Clashes, List<double> Lanes, Dictionary<Wire, double> Lane, Dictionary<Dot, double> Fan) Lay()
         {
-            var direct = group.SelectMany(w => w.Dots).Distinct().Where(d => d.Direct).ToList();
-            var y = Place(c => group.SelectMany(w => Lines(w, c, Above, Below)).Concat(direct.SelectMany(d => Leaving(d, c, c, Below))),
-                lanes, placed);
-            foreach (var wire in group)
-                lane[wire] = y;
+            var placed = new List<Segment>();
+            var lanes = new List<double>();
+            var lane = new Dictionary<Wire, double>();
+            var fan = new Dictionary<Dot, double>();
+            var clashes = 0;
+            foreach (var wire in wires.Where(w => w.Straight))
+                placed.AddRange(Lines(wire, 0, Above, Below));
+            foreach (var group in Groups(wires.Where(w => !w.Straight))
+                         .OrderBy(g => g.Any(w => w.Dots.Count > 0) ? 0 : 1).ThenBy(g => g.SelectMany(w => w.Points()).Min()))
+            {
+                var direct = group.SelectMany(w => w.Dots).Distinct().Where(d => d.Direct).ToList();
+                var (y, c) = Place(l => group.SelectMany(w => Lines(w, l, Above, Below)).Concat(direct.SelectMany(d => Leaving(d, l, l, Below))),
+                    lanes, placed);
+                clashes += c;
+                foreach (var wire in group)
+                    lane[wire] = y;
+            }
+            foreach (var dot in dots.Where(d => !d.Direct))
+            {
+                var y = lane[dot.Wires[0]];
+                (fan[dot], var c) = Place(l => Leaving(dot, y + 0.01, l, Below), lanes, placed, below: y);
+                clashes += c;
+            }
+            return (clashes, lanes, lane, fan);
         }
-        foreach (var dot in dots.Where(d => !d.Direct))
-        {
-            var y = lane[dot.Wires[0]];
-            fan[dot] = Place(c => Leaving(dot, y + 0.01, c, Below), lanes, placed, below: y);
-        }
+
+        var tries = later.Count <= 6 ? 1 << later.Count : 1;
+        var best = Enumerable.Range(0, tries)
+            .Select(flips =>
+            {
+                Branch(flips);
+                var laid = Lay();
+                return (Flips: flips, laid.Clashes, Lanes: laid.Lanes.Distinct().Count());
+            })
+            .OrderBy(t => t.Clashes).ThenBy(t => t.Lanes).ThenBy(t => t.Flips)
+            .First();
+        Branch(best.Flips);
+        var (_, lanes, lane, fan) = Lay();
 
         var order = lanes.Distinct().Order().ToList();
         double Y(double l) => top + (bottom - top) * (order.IndexOf(l) + 1.0) / (order.Count + 1);
 
-        var links = wires.Values.OrderBy(w => w.Points().Min()).Select(w => new Link(
+        var links = wires.OrderBy(w => w.Points().Min()).Select(w => new Link(
             [w.Clause], w.Clause,
             w.Children.Concat(w.Dots.SelectMany(d => d.Children)).OrderBy(c => c.X).Select(c => c.Object).Distinct().ToList(),
             Path(w.Straight ? [Segment.V(w.Branches[0].X, top, bottom)] : Lines(w, Y(lane[w]), top, bottom)),
@@ -249,18 +305,20 @@ public sealed class SkillTreeDrawing
     /// The lane with the fewest clashes with what is already drawn: one in use, or failing that a new one above, between
     /// or below them (below <paramref name="below"/> when given).
     /// </summary>
-    private static double Place(Func<double, IEnumerable<Segment>> lines, List<double> lanes, List<Segment> placed, double? below = null)
+    private static (double Lane, int Clashes) Place(Func<double, IEnumerable<Segment>> lines, List<double> lanes, List<Segment> placed,
+        double? below = null)
     {
         var used = lanes.Distinct().Order().ToList();
         var fresh = used.Count == 0 ? [0] : used.Zip(used.Skip(1), (a, b) => (a + b) / 2).Append(used[0] - 1).Append(used[^1] + 1).ToList();
         var best = used.Concat(fresh)
             .Where(c => below is null || c > below)
-            .OrderBy(c => lines(c).Sum(s => placed.Count(t => Clash(s, t))))
-            .ThenBy(c => used.Contains(c) ? 0 : 1)
-            .ThenBy(c => c)
+            .Select(c => (Lane: c, Clashes: lines(c).Sum(s => placed.Count(t => Clash(s, t)))))
+            .OrderBy(c => c.Clashes)
+            .ThenBy(c => used.Contains(c.Lane) ? 0 : 1)
+            .ThenBy(c => c.Lane)
             .First();
-        placed.AddRange(lines(best));
-        lanes.Add(best);
+        placed.AddRange(lines(best.Lane));
+        lanes.Add(best.Lane);
         return best;
     }
 

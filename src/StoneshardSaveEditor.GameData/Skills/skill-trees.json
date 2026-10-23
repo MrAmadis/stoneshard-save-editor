@@ -93,11 +93,15 @@
       "row": 1,
       "requires": [
         [
-          "o_pass_skill_ferocity",
+          "o_pass_skill_ferocity"
+        ],
+        [
+          "o_pass_skill_show_no_mercy"
+        ],
+        [
           "o_skill_crippling_lunge_ico"
         ],
         [
-          "o_pass_skill_show_no_mercy",
           "o_skill_cut_through_ico"
         ]
       ]
@@ -107,11 +111,15 @@
       "row": 1,
       "requires": [
         [
-          "o_pass_skill_ferocity",
+          "o_pass_skill_ferocity"
+        ],
+        [
+          "o_pass_skill_show_no_mercy"
+        ],
+        [
           "o_skill_crippling_lunge_ico"
         ],
         [
-          "o_pass_skill_show_no_mercy",
           "o_skill_cut_through_ico"
         ]
       ]
@@ -344,8 +352,7 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_recklessness",
-          "o_skill_steel_feast_ico"
+          "o_pass_skill_recklessness"
         ]
       ]
     },
@@ -354,11 +361,15 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_fight_to_death",
+          "o_pass_skill_fight_to_death"
+        ],
+        [
+          "o_pass_skill_recklessness"
+        ],
+        [
           "o_skill_arc_cleave_ico"
         ],
         [
-          "o_pass_skill_recklessness",
           "o_skill_steel_feast_ico"
         ]
       ]
@@ -368,8 +379,7 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_fight_to_death",
-          "o_skill_arc_cleave_ico"
+          "o_pass_skill_fight_to_death"
         ]
       ]
     }
@@ -507,12 +517,16 @@
       "row": 1,
       "requires": [
         [
-          "o_pass_skill_balance_loss",
-          "o_skill_unstoppable_force_ico"
+          "o_pass_skill_balance_loss"
         ],
         [
-          "o_pass_skill_blow_after_blow",
+          "o_pass_skill_blow_after_blow"
+        ],
+        [
           "o_skill_mighty_swing_ico"
+        ],
+        [
+          "o_skill_unstoppable_force_ico"
         ]
       ]
     },
@@ -521,12 +535,16 @@
       "row": 1,
       "requires": [
         [
-          "o_pass_skill_balance_loss",
-          "o_skill_unstoppable_force_ico"
+          "o_pass_skill_balance_loss"
         ],
         [
-          "o_pass_skill_blow_after_blow",
+          "o_pass_skill_blow_after_blow"
+        ],
+        [
           "o_skill_mighty_swing_ico"
+        ],
+        [
+          "o_skill_unstoppable_force_ico"
         ]
       ]
     },
@@ -535,12 +553,16 @@
       "row": 1,
       "requires": [
         [
-          "o_pass_skill_balance_loss",
-          "o_skill_unstoppable_force_ico"
+          "o_pass_skill_balance_loss"
         ],
         [
-          "o_pass_skill_blow_after_blow",
+          "o_pass_skill_blow_after_blow"
+        ],
+        [
           "o_skill_mighty_swing_ico"
+        ],
+        [
+          "o_skill_unstoppable_force_ico"
         ]
       ]
     },
@@ -1333,8 +1355,7 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_resourcefulness",
-          "o_pass_skill_trailblazer"
+          "o_pass_skill_resourcefulness"
         ]
       ]
     },
@@ -1363,7 +1384,6 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_asceticism",
           "o_skill_first_aid_ico"
         ]
       ]
@@ -1830,11 +1850,15 @@
       "row": 3,
       "requires": [
         [
-          "o_pass_skill_conduit",
+          "o_pass_skill_conduit"
+        ],
+        [
+          "o_pass_skill_unlimited_power"
+        ],
+        [
           "o_skill_ball_lightning_ico"
         ],
         [
-          "o_pass_skill_unlimited_power",
           "o_skill_chain_lightning_ico"
         ]
       ]
@@ -1844,11 +1868,15 @@
       "row": 3,
       "requires": [
         [
-          "o_pass_skill_conduit",
+          "o_pass_skill_conduit"
+        ],
+        [
+          "o_pass_skill_unlimited_power"
+        ],
+        [
           "o_skill_ball_lightning_ico"
         ],
         [
-          "o_pass_skill_unlimited_power",
           "o_skill_chain_lightning_ico"
         ]
       ]
@@ -1858,11 +1886,15 @@
       "row": 3,
       "requires": [
         [
-          "o_pass_skill_conduit",
+          "o_pass_skill_conduit"
+        ],
+        [
+          "o_pass_skill_unlimited_power"
+        ],
+        [
           "o_skill_ball_lightning_ico"
         ],
         [
-          "o_pass_skill_unlimited_power",
           "o_skill_chain_lightning_ico"
         ]
       ]
@@ -1872,11 +1904,15 @@
       "row": 3,
       "requires": [
         [
-          "o_pass_skill_conduit",
+          "o_pass_skill_conduit"
+        ],
+        [
+          "o_pass_skill_unlimited_power"
+        ],
+        [
           "o_skill_ball_lightning_ico"
         ],
         [
-          "o_pass_skill_unlimited_power",
           "o_skill_chain_lightning_ico"
         ]
       ]
@@ -1903,7 +1939,6 @@
       "row": 1,
       "requires": [
         [
-          "o_skill_planar_exchange_ico",
           "o_skill_wormhole_ico"
         ]
       ]
@@ -1923,8 +1958,7 @@
       "row": 1,
       "requires": [
         [
-          "o_skill_planar_exchange_ico",
-          "o_skill_wormhole_ico"
+          "o_skill_planar_exchange_ico"
         ]
       ]
     },
@@ -1936,8 +1970,7 @@
           "o_pass_skill_arcane_might"
         ],
         [
-          "o_skill_planar_exchange_ico",
-          "o_skill_wormhole_ico"
+          "o_skill_planar_exchange_ico"
         ]
       ]
     },
@@ -1955,8 +1988,7 @@
       "row": 2,
       "requires": [
         [
-          "o_pass_skill_spatial_anchors",
-          "o_skill_aether_shield_ico"
+          "o_pass_skill_spatial_anchors"
         ],
         [
           "o_skill_schism_ico"
