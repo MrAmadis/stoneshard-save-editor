@@ -58,13 +58,19 @@ public static class TestCharacterCloner
     /// <returns>The new slot's folder name.</returns>
     public static string KeepAsSave(string root, string character, string slot)
     {
-        if (!character.StartsWith("character_", StringComparison.Ordinal)
-            || !int.TryParse(character["character_".Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var n) || n < FirstTestCharacter)
-            throw new InvalidOperationException($"{character} isn't a test character; only character_{FirstTestCharacter} and up are written");
+        RequireTestCharacter(character);
         RequireSlot(root, character, slot);
         var target = $"save_{Enumerable.Range(1, int.MaxValue - 1).First(i => !Directory.Exists(Path.Combine(root, character, $"save_{i}")))}";
         CopySlot(root, character, slot, character, target, null);
         return target;
+    }
+
+    /// <summary>Refuses anything but a test character (<c>character_3</c> and up), so the owner's are never written.</summary>
+    public static void RequireTestCharacter(string character)
+    {
+        if (!character.StartsWith("character_", StringComparison.Ordinal)
+            || !int.TryParse(character["character_".Length..], NumberStyles.None, CultureInfo.InvariantCulture, out var n) || n < FirstTestCharacter)
+            throw new InvalidOperationException($"{character} isn't a test character; only character_{FirstTestCharacter} and up are written");
     }
 
     private static void RequireSlot(string root, string character, string slot, params string[] more)

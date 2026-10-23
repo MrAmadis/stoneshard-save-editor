@@ -18,6 +18,7 @@ try
         "clone-test-character" => CloneTestCharacter(options),
         "point-continue" => PointContinue(options),
         "keep-save" => KeepSave(options),
+        "reset-skills" => ResetSkills(options),
         "dump" => Dump(options),
         "diff" => DiffFiles(options),
         "make-experiments" => MakeExperiments(options),
@@ -107,6 +108,14 @@ static int KeepSave(Dictionary<string, string> o)
     return 0;
 }
 
+static int ResetSkills(Dictionary<string, string> o)
+{
+    var game = GameServices.Load(Required(o, "game"));
+    var slots = Experiments.ResetSkills(Required(o, "root"), Required(o, "character"), game, new BackupService(BackupService.DefaultRoot), new GameProcessProbe());
+    Console.WriteLine($"{o["character"]}: {string.Join(", ", slots)} reset (every treatise read, only starting skills, 100 ability points)");
+    return 0;
+}
+
 static int PointContinue(Dictionary<string, string> o)
 {
     TestCharacterCloner.PointContinue(Required(o, "root"), Required(o, "character"), Required(o, "slot"), BackupService.DefaultRoot);
@@ -169,6 +178,7 @@ static int Usage()
           clone-test-character --root <characters_v1> --from <character_N> --slot <slot> [--label <locationKey>]
           point-continue       --root <characters_v1> --character <character_N> --slot <slot>
           keep-save            --root <characters_v1> --character <character_N> --slot <slot>
+          reset-skills         --root <characters_v1> --character <character_N> --game <Stoneshard folder>
           dump                 --file <save file> [--path a.b[3]]
           diff                 --a <data.sav> --b <data.sav>
           make-experiments     --root <characters_v1> --game <Stoneshard folder>

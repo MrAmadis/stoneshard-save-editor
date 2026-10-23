@@ -14,11 +14,11 @@ public class ExperimentsTests
 
     private static readonly Lazy<GameServices> Game = new(() => GameServices.Load(Fixtures.GameDir));
 
-    private static GmObject Load(string root, string character)
+    private static GmObject Load(string root, string character, string slot = "save_1")
     {
-        var file = Path.Combine(root, character, "save_1", "data.sav");
+        var file = Path.Combine(root, character, slot, "data.sav");
         var decoded = SaveCodec.Decode(File.ReadAllBytes(file));
-        Assert.True(SaveCodec.HashMatches(decoded, Salt.For(SaveFileKind.SlotFile, character, "save_1")), $"{character} is not validly signed");
+        Assert.True(SaveCodec.HashMatches(decoded, Salt.For(SaveFileKind.SlotFile, character, slot)), $"{character}/{slot} is not validly signed");
         return (GmObject)GmJson.Parse(decoded.Json);
     }
 
@@ -123,7 +123,11 @@ public class ExperimentsTests
 
         var made = Experiments.BuildSessionD(root, Game.Value, backups, new FakeProbe(false)).Single();
 
-        var save = Load(root, made.Folder);
+        AssertEveryBookReadAndNothingLearned(Load(root, made.Folder));
+    }
+
+    private static void AssertEveryBookReadAndNothingLearned(GmObject save)
+    {
         var state = SkillsEditor.ReadFrom(save).ToDictionary(s => s.Object);
         var catalog = Game.Value.SkillsFor(save);
         var inLayouts = catalog.Trees.Where(t => catalog.Layout(t.Id) is not null).SelectMany(t => t.Skills).ToList();
@@ -131,6 +135,34 @@ public class ExperimentsTests
         Assert.Equal(SkillsEditor.Innate.Order(), state.Values.Where(s => s.Learned).Select(s => s.Object).Order());
         Assert.Contains("treatise_shield2", ((GmArray)((GmObject)save["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>().Select(b => b.Value));
         Assert.Equal(100, ((GmObject)save["characterDataMap"]!)["SP"]!.AsDouble());
+    }
+
+    [Fact]
+    public void Reset_skills_gives_every_save_of_a_test_character_session_Ds_start()
+    {
+        // The owner played character_5 and wants it back to nothing learned, with every book still read.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+        var made = TestCharacterCloner.Clone(root, "character_2", "exitsave_1");
+        TestCharacterCloner.KeepAsSave(root, made, "save_1");
+
+        var reset = Experiments.ResetSkills(root, made, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal(["save_1", "save_2"], reset.Order());
+        Assert.All(reset, slot => AssertEveryBookReadAndNothingLearned(Load(root, made, slot)));
+    }
+
+    [Fact]
+    public void Reset_skills_never_writes_the_owners_characters()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        var before = File.ReadAllBytes(Path.Combine(root, "character_2", "exitsave_1", "data.sav"));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            Experiments.ResetSkills(root, "character_2", Game.Value, new BackupService(Path.GetTempPath()), new FakeProbe(false)));
+
+        Assert.Equal(before, File.ReadAllBytes(Path.Combine(root, "character_2", "exitsave_1", "data.sav")));
     }
 
     [Fact]

@@ -86,6 +86,27 @@ public static class Experiments
         return batch.Results;
     }
 
+    /// <summary>
+    /// Puts every save of an existing test character back to session D's start: every treatise read, only starting
+    /// skills learned and 100 ability points. Each save is backed up first.
+    /// </summary>
+    /// <returns>The slots reset.</returns>
+    public static IReadOnlyList<string> ResetSkills(string root, string character, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        TestCharacterCloner.RequireTestCharacter(character);
+        if (probe.IsGameRunning())
+            throw new InvalidOperationException("Close Stoneshard before resetting a test character");
+        var slots = new SaveLocator(root).Scan().Single(c => c.Folder == character).Slots.Where(s => s.Status == SlotStatus.Ok).ToList();
+        foreach (var slot in slots)
+        {
+            var session = SaveSession.Open(slot);
+            EveryBookRead(session, game);
+            if (session.ChangeCount > 0 && session.Save(backups, probe) is var result and not SaveResult.Saved)
+                throw new InvalidOperationException($"Could not save {character}/{slot.SlotFolder}: {result}");
+        }
+        return slots.Select(s => s.SlotFolder).ToList();
+    }
+
     private static void EveryBookRead(SaveSession s, GameServices game)
     {
         var catalog = game.SkillsFor(s.Root);
