@@ -116,8 +116,7 @@ public class ExperimentsTests
     [Fact]
     public void Session_D_builds_the_rules_check_character()
     {
-        // The game recomputes which skills open when one is learned in-game, not on load (owner, session D): so the owner
-        // learns one skill per tree and reports what opens.
+        // Every treatise read, so the lock flags are out of the way and only the lines decide what can be learned.
         _ = Fixtures.GameDir;
         var root = Fixtures.CopyRealSavesToTemp();
         var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
@@ -126,16 +125,12 @@ public class ExperimentsTests
 
         var save = Load(root, made.Folder);
         var state = SkillsEditor.ReadFrom(save).ToDictionary(s => s.Object);
-        var skills = Game.Value.SkillsFor(save).Trees
-            .Where(t => t.Id is "shield" or "staff" or "spear" or "athletic")
-            .SelectMany(t => t.Skills).ToDictionary(s => s.DisplayName, s => state[s.Object]);
-        Assert.Equal(new[] { "Disengage", "Hail of Blows", "Impaling Lunge", "Nail Down", "Precise Hits", "Wounding Spearhead" },
-            skills.Where(s => s.Value.Learned).Select(s => s.Key).Order());
-        Assert.All(new[] { "Breakthrough", "Step Aside!", "Pikeman Stance", "Dash" },
-            n => Assert.Equal((false, false), (skills[n].Learned, skills[n].Locked)));
-        Assert.All(new[] { "Shield Bash", "Now or Never", "Unwavering Stance", "Triumph", "One at a Time!", "Regroup", "Elusiveness" },
-            n => Assert.True(skills[n].Locked, n));
-        Assert.Equal(10, ((GmObject)save["characterDataMap"]!)["SP"]!.AsDouble());
+        var catalog = Game.Value.SkillsFor(save);
+        var inLayouts = catalog.Trees.Where(t => catalog.Layout(t.Id) is not null).SelectMany(t => t.Skills).ToList();
+        Assert.All(inLayouts, s => Assert.False(state[s.Object].Locked, s.Object));
+        Assert.Equal(SkillsEditor.Innate.Order(), state.Values.Where(s => s.Learned).Select(s => s.Object).Order());
+        Assert.Contains("treatise_shield2", ((GmArray)((GmObject)save["characterDataMap"]!)["Books_Read"]!).Items.OfType<GmString>().Select(b => b.Value));
+        Assert.Equal(100, ((GmObject)save["characterDataMap"]!)["SP"]!.AsDouble());
     }
 
     [Fact]

@@ -71,41 +71,34 @@ public static class Experiments
     }
 
     /// <summary>
-    /// Test character for in-game session D: does a skill with lines from two places need both, as "Follow game rules"
-    /// assumes (Task 13 ruling)? The game recomputes which skills open when one is learned in-game, not on load, so each
-    /// tree is one skill short: the owner learns it (10 ability points) and reports what opens.
+    /// Test character for in-game session D: with every treatise read, which skills does each skill need? The tiers'
+    /// locks are out of the way, everything bought is unlearned and there are 100 ability points, so the owner learns
+    /// skills in a given order and reports when each next one becomes learnable.
     /// </summary>
     public static IReadOnlyList<ExperimentResult> BuildSessionD(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
     {
         var batch = Batch.Start(root, backups, probe);
         batch.Make("Denbrie",
-            "D1 (10 ability points): learn one skill per tree and say what opens. Shields: learn Breakthrough, does Shield Bash open " +
-            "(Moment of Retribution not learned)? Staves: learn Step Aside!, do Now or Never, Unwavering Stance, Triumph open? " +
-            "Polearms: learn Pikeman Stance, do One at a Time! and Regroup open (Determination not learned)? Athletics: learn Dash, " +
-            "does Elusiveness open (Inner Reserves not learned)?",
-            s => RulesCheck(s, game));
+            "D2 (every treatise read, 100 ability points, only starting skills learned): learn in the listed order and say when " +
+            "each skill becomes learnable (see the checklist)",
+            s => EveryBookRead(s, game));
         return batch.Results;
     }
 
-    private static void RulesCheck(SaveSession s, GameServices game)
+    private static void EveryBookRead(SaveSession s, GameServices game)
     {
         var catalog = game.SkillsFor(s.Root);
         var skills = new SkillsEditor(s);
-        var staves = catalog.Trees.Single(t => t.Id == "staff");
-        skills.UnlockTree(catalog.UnlockSet(staves.Id), $"treatise_{staves.TreatisePrefix}1");
-        void Learn(string tree, params string[] names)
+        skills.RespecAll();
+        foreach (var tree in catalog.Trees.Where(t => t.TreatisePrefix is not null && catalog.Layout(t.Id) is not null))
         {
-            foreach (var name in names)
-                skills.Learn(catalog.Trees.Single(t => t.Id == tree).Skills.Single(k => k.DisplayName == name).Object, spendPoint: false);
+            var survivalStart = catalog.Layout(tree.Id)!.Skills.Where(p => catalog.VolumeOf(p.Key) is null).Select(p => p.Key).ToList();
+            if (survivalStart.Count > 0)
+                skills.Unlock(survivalStart); // rows open from the start (Survival's first)
+            foreach (var volume in Enumerable.Range(1, catalog.Volumes(tree.Id)))
+                skills.UnlockTree(catalog.TierSkills(tree.Id, volume), $"treatise_{tree.TreatisePrefix}{volume}");
         }
-        string Obj(string tree, string name) => catalog.Trees.Single(t => t.Id == tree).Skills.Single(k => k.DisplayName == name).Object;
-
-        Learn("staff", "Hail of Blows");
-        Learn("spear", "Precise Hits", "Nail Down", "Impaling Lunge", "Wounding Spearhead");
-        Learn("athletic", "Disengage");
-        // The one skill left to learn in each tree is ready to learn; what it opens is the game's answer.
-        skills.Unlock([Obj("shield", "Breakthrough"), Obj("staff", "Step Aside!"), Obj("spear", "Pikeman Stance"), Obj("athletic", "Dash")]);
-        new CharacterEditor(s).Set(CharacterField.AbilityPoints, 10);
+        new CharacterEditor(s).Set(CharacterField.AbilityPoints, 100);
     }
 
     private static void SetGold(SaveSession s, GameServices game, int amount) =>
