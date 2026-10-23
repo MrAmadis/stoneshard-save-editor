@@ -92,3 +92,16 @@ Every judgement call the executor made on the owner's behalf while carrying out 
 - Inventory selection can jump to another copy of the same item after a Delete shifts indices.
 - EditorService reads _session outside the lock in Restore/Backups/Reload/IsOpen (harmless on one dispatcher).
 - rules mode may ask for one skill more than the game in Shields, Staves, Spears and Athletics (see Task 13 ruling).
+
+## Fixed after the final review (2026-10-23)
+
+The owner asked to fix everything possible; all but the last deferred finding are fixed, each with a test that failed first:
+
+- The save list loads in the background and says "Reading the game files…" instead of freezing on first start.
+- Restoring a backup over unsaved edits asks first ("Restoring this backup drops your N unsaved changes").
+- The inventory selection follows the item (its bag cell or equipment slot), not its list index.
+- Backup entries must land inside the slot folder itself; `exitsave_10` no longer passes for `exitsave_1`.
+- The single-file build stops with an error if the SDK no longer hands over the static web assets.
+- Test characters stay within `character_3`–`character_10`; beyond that the Lab refuses. A clone whose source is missing creates nothing, and the Lab copies Velmir's newest save once his exit save is consumed.
+- `EditorService` reads the open save under its lock everywhere.
+- Still open: whether "Follow game rules" asks for one skill too many in Shields, Staves, Spears and Athletics. Session D's test character (`character_4`) checks it in-game.
