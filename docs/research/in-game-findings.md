@@ -84,3 +84,4 @@ So: a skill with a dot on its line needs every skill whose line runs into the do
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
 - Session E's re-read patterns above (no in-game check yet).
+- Test characters are now written as `save_1` instead of `exitsave_1`, so loading one no longer consumes it; `Lab keep-save` copies a played test character's slot to its next `save_N` (done for `character_5`). Not yet seen: the game listing a character whose only save is `save_1`.

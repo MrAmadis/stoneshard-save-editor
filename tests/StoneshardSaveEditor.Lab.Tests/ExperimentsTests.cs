@@ -16,9 +16,9 @@ public class ExperimentsTests
 
     private static GmObject Load(string root, string character)
     {
-        var file = Path.Combine(root, character, "exitsave_1", "data.sav");
+        var file = Path.Combine(root, character, "save_1", "data.sav");
         var decoded = SaveCodec.Decode(File.ReadAllBytes(file));
-        Assert.True(SaveCodec.HashMatches(decoded, Salt.For(SaveFileKind.SlotFile, character, "exitsave_1")), $"{character} is not validly signed");
+        Assert.True(SaveCodec.HashMatches(decoded, Salt.For(SaveFileKind.SlotFile, character, "save_1")), $"{character} is not validly signed");
         return (GmObject)GmJson.Parse(decoded.Json);
     }
 

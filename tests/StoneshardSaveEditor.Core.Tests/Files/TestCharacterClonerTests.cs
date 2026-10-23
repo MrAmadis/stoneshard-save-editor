@@ -23,16 +23,53 @@ public class TestCharacterClonerTests
 
         Assert.Equal("character_3", created);
         DecodeVerified(Path.Combine(root, "character_3", "character.map"), "stOne!characters_v1!character_3!shArd");
-        const string slotSalt = "stOne!characters_v1!character_3!exitsave_1!shArd";
-        var map = DecodeVerified(Path.Combine(root, "character_3", "exitsave_1", "save.map"), slotSalt);
+        const string slotSalt = "stOne!characters_v1!character_3!save_1!shArd";
+        var map = DecodeVerified(Path.Combine(root, "character_3", "save_1", "save.map"), slotSalt);
         Assert.Equal("Osbrook", ((GmString)map["locationTitleKey"]!).Value);
-        DecodeVerified(Path.Combine(root, "character_3", "exitsave_1", "data.sav"), slotSalt);
+        DecodeVerified(Path.Combine(root, "character_3", "save_1", "data.sav"), slotSalt);
         Assert.Equal(
             SaveCodec.Decode(sourceBytes["data.sav"]).Json,
-            SaveCodec.Decode(File.ReadAllBytes(Path.Combine(root, "character_3", "exitsave_1", "data.sav"))).Json);
-        Assert.True(File.Exists(Path.Combine(root, "character_3", "exitsave_1", "preview.png")));
+            SaveCodec.Decode(File.ReadAllBytes(Path.Combine(root, "character_3", "save_1", "data.sav"))).Json);
+        Assert.True(File.Exists(Path.Combine(root, "character_3", "save_1", "preview.png")));
         foreach (var (name, bytes) in sourceBytes)
             Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(sourceSlot, name)));
+        // A regular save, which the game keeps when it loads it (an exit save is consumed, sessions A-C).
+        Assert.Equal(["save_1"], Directory.GetDirectories(Path.Combine(root, "character_3")).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public void Keep_as_save_copies_a_test_characters_slot_to_its_next_regular_save()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        var made = TestCharacterCloner.Clone(root, "character_2", "exitsave_1");
+        // As the game leaves it after a quit: an exit save signed for its own folder.
+        var exit = Directory.CreateDirectory(Path.Combine(root, made, "exitsave_1")).FullName;
+        foreach (var file in Directory.GetFiles(Path.Combine(root, made, "save_1")))
+            File.WriteAllBytes(Path.Combine(exit, Path.GetFileName(file)), Path.GetExtension(file) == ".png"
+                ? File.ReadAllBytes(file)
+                : SaveCodec.Encode(SaveCodec.Decode(File.ReadAllBytes(file)).Json, Salt.For(SaveFileKind.SlotFile, made, "exitsave_1")));
+        Directory.Delete(Path.Combine(root, made, "save_1"), recursive: true);
+        var played = File.ReadAllBytes(Path.Combine(exit, "data.sav"));
+
+        Assert.Equal("save_1", TestCharacterCloner.KeepAsSave(root, made, "exitsave_1"));
+        Assert.Equal("save_2", TestCharacterCloner.KeepAsSave(root, made, "exitsave_1"));
+
+        const string salt = "stOne!characters_v1!character_3!save_2!shArd";
+        DecodeVerified(Path.Combine(root, made, "save_2", "save.map"), salt);
+        DecodeVerified(Path.Combine(root, made, "save_2", "data.sav"), salt);
+        Assert.Equal(SaveCodec.Decode(played).Json, SaveCodec.Decode(File.ReadAllBytes(Path.Combine(root, made, "save_2", "data.sav"))).Json);
+        Assert.True(File.Exists(Path.Combine(root, made, "save_2", "preview.png")));
+        Assert.Equal(played, File.ReadAllBytes(Path.Combine(root, made, "exitsave_1", "data.sav")));
+    }
+
+    [Fact]
+    public void Keep_as_save_never_writes_the_owners_characters()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+
+        Assert.Throws<InvalidOperationException>(() => TestCharacterCloner.KeepAsSave(root, "character_2", "exitsave_1"));
+
+        Assert.False(Directory.Exists(Path.Combine(root, "character_2", "save_3")));
     }
 
     [Fact]
@@ -78,7 +115,7 @@ public class TestCharacterClonerTests
         var root = Fixtures.CopyRealSavesToTemp();
         var source = DecodeVerified(Path.Combine(root, "character_2", "save_1", "save.map"), "stOne!characters_v1!character_2!save_1!shArd");
         TestCharacterCloner.Clone(root, "character_2", "save_1");
-        var map = DecodeVerified(Path.Combine(root, "character_3", "exitsave_1", "save.map"), "stOne!characters_v1!character_3!exitsave_1!shArd");
+        var map = DecodeVerified(Path.Combine(root, "character_3", "save_1", "save.map"), "stOne!characters_v1!character_3!save_1!shArd");
         Assert.Equal("Brynn_NW", ((GmString)source["locationTitleKey"]!).Value);
         Assert.Equal("Brynn_NW", ((GmString)map["locationTitleKey"]!).Value);
     }
@@ -90,7 +127,7 @@ public class TestCharacterClonerTests
         TestCharacterCloner.Clone(root, "character_2", "exitsave_1", minutesLater: 30);
 
         var original = DecodeVerified(Path.Combine(root, "character_2", "exitsave_1", "save.map"), "stOne!characters_v1!character_2!exitsave_1!shArd");
-        var shifted = DecodeVerified(Path.Combine(root, "character_3", "exitsave_1", "save.map"), "stOne!characters_v1!character_3!exitsave_1!shArd");
+        var shifted = DecodeVerified(Path.Combine(root, "character_3", "save_1", "save.map"), "stOne!characters_v1!character_3!save_1!shArd");
         var characterMap = DecodeVerified(Path.Combine(root, "character_3", "character.map"), "stOne!characters_v1!character_3!shArd");
         var delta = ((GmNumber)shifted["dateTime"]!).Value - ((GmNumber)original["dateTime"]!).Value;
         Assert.Equal(30.0 / 1440, delta, 9);

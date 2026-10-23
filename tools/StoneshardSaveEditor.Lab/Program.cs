@@ -17,6 +17,7 @@ try
     {
         "clone-test-character" => CloneTestCharacter(options),
         "point-continue" => PointContinue(options),
+        "keep-save" => KeepSave(options),
         "dump" => Dump(options),
         "diff" => DiffFiles(options),
         "make-experiments" => MakeExperiments(options),
@@ -94,6 +95,18 @@ static int CloneTestCharacter(Dictionary<string, string> o)
     return 0;
 }
 
+static int KeepSave(Dictionary<string, string> o)
+{
+    if (new GameProcessProbe().IsGameRunning())
+    {
+        Console.Error.WriteLine("Close Stoneshard first");
+        return 1;
+    }
+    var slot = TestCharacterCloner.KeepAsSave(Required(o, "root"), Required(o, "character"), Required(o, "slot"));
+    Console.WriteLine($"{o["character"]}/{o["slot"]} copied to {slot}");
+    return 0;
+}
+
 static int PointContinue(Dictionary<string, string> o)
 {
     TestCharacterCloner.PointContinue(Required(o, "root"), Required(o, "character"), Required(o, "slot"), BackupService.DefaultRoot);
@@ -155,6 +168,7 @@ static int Usage()
         usage:
           clone-test-character --root <characters_v1> --from <character_N> --slot <slot> [--label <locationKey>]
           point-continue       --root <characters_v1> --character <character_N> --slot <slot>
+          keep-save            --root <characters_v1> --character <character_N> --slot <slot>
           dump                 --file <save file> [--path a.b[3]]
           diff                 --a <data.sav> --b <data.sav>
           make-experiments     --root <characters_v1> --game <Stoneshard folder>

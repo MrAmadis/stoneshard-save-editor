@@ -8,7 +8,8 @@ public sealed record ExperimentResult(string Folder, string Label, string Purpos
 
 /// <summary>
 /// Builds the test characters for the in-game sessions (design §10, plan Task 12). Each is a re-signed copy of
-/// Velmir's exit save with one experiment applied; the owner's real characters are never written.
+/// Velmir's latest save with one experiment applied, written as a regular save so loading it doesn't consume it; the
+/// owner's real characters are never written.
 /// </summary>
 public static class Experiments
 {
