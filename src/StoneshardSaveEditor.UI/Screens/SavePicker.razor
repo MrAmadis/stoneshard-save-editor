@@ -7,6 +7,10 @@
         <p class="muted">Choose a save to edit. Every save to the game keeps a backup of the previous version.</p>
     </header>
 
+    @if (_loading)
+    {
+        <p class="muted loading">Reading the game files… The first start takes a few seconds.</p>
+    }
     @if (!_setup.SavesFound)
     {
         <Banner Kind="error">No Stoneshard saves found at @_setup.SavesRoot</Banner>
@@ -66,13 +70,16 @@
     private IReadOnlyList<CharacterView> _characters = [];
     private bool _running;
     private string? _error;
+    private bool _loading;
 
-    protected override void OnInitialized() => Load();
+    protected override Task OnInitializedAsync() => Load();
 
-    private void Load()
+    /// <summary>Reads the saves and, on first use, the game files (~280 MB) off the UI thread.</summary>
+    private async Task Load()
     {
-        _setup = EditorService.Setup();
-        _characters = EditorService.Characters();
+        _loading = true;
+        var (setup, characters) = await Task.Run(() => (EditorService.Setup(), EditorService.Characters()));
+        (_setup, _characters, _loading) = (setup, characters, false);
         _running = EditorService.GameRunning();
     }
 
@@ -92,7 +99,7 @@
         }
     }
 
-    private void ChooseGame()
+    private async Task ChooseGame()
     {
         var path = EditorService.BrowseForGameDir();
         if (path is null)
@@ -101,7 +108,7 @@
         {
             _error = null;
             EditorService.SetGameDir(path);
-            Load();
+            await Load();
         }
         catch (EditRejectedException e)
         {

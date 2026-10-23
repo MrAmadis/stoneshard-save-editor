@@ -17,6 +17,9 @@ public sealed class FakeAssets : IAssetUrls
 
 public class ShellTests
 {
+    /// <summary>The save list waits for the game files, which take seconds to read the first time.</summary>
+    private static readonly TimeSpan GameFilesLoad = TimeSpan.FromSeconds(60);
+
     public static BunitContext Context(EditorServiceTests.Harness h)
     {
         var ctx = new BunitContext();
@@ -33,8 +36,8 @@ public class ShellTests
         using var ctx = Context(h);
 
         var cut = ctx.Render<SavePicker>();
+        cut.WaitForAssertion(() => Assert.Contains("Velmir", cut.Markup), GameFilesLoad);
 
-        Assert.Contains("Velmir", cut.Markup);
         Assert.Contains("Revenger · Level 5", cut.Markup);
         Assert.Contains("Exit save", cut.Markup);
         Assert.Contains("Caravan Camp", cut.Markup);
@@ -44,13 +47,39 @@ public class ShellTests
     }
 
     [Fact]
+    public void SavePicker_says_it_is_reading_the_game_files_meanwhile()
+    {
+        // The first start reads ~280 MB of game files; the window must not look frozen (spec §9, final review).
+        var root = Fixtures.CopyRealSavesToTemp();
+        var work = Directory.CreateTempSubdirectory().FullName;
+        using var gate = new ManualResetEventSlim();
+        var options = new EditorOptions(root, Path.Combine(work, "backups"), Path.Combine(work, "cache"), Path.Combine(work, "settings.json"),
+            new EditorServiceTests.FakeProbe(), null);
+        var editor = new EditorService(options, new GameDataProvider(() =>
+        {
+            gate.Wait(TimeSpan.FromSeconds(30));
+            return null;
+        }, options.CacheRoot));
+        using var ctx = new BunitContext();
+        ctx.Services.AddSingleton(editor);
+        ctx.Services.AddSingleton<IAssetUrls>(new FakeAssets());
+
+        var cut = ctx.Render<SavePicker>();
+        Assert.Contains("Reading the game files", cut.Markup);
+
+        gate.Set();
+        cut.WaitForAssertion(() => Assert.Contains("Velmir", cut.Markup), GameFilesLoad);
+        Assert.DoesNotContain("Reading the game files", cut.Markup);
+    }
+
+    [Fact]
     public void Picking_a_slot_opens_the_editor_and_back()
     {
         var h = EditorServiceTests.Start();
         using var ctx = Context(h);
         var cut = ctx.Render<App>();
 
-        cut.Find("[data-slot='character_2/exitsave_1']").Click();
+        cut.WaitForElement("[data-slot='character_2/exitsave_1']", GameFilesLoad).Click();
 
         Assert.True(h.Editor.IsOpen);
         Assert.Contains("Save to game", cut.Markup);
@@ -58,7 +87,7 @@ public class ShellTests
 
         cut.Find("button.back").Click();
         Assert.False(h.Editor.IsOpen);
-        Assert.Contains("Exit save", cut.Markup);
+        cut.WaitForAssertion(() => Assert.Contains("Exit save", cut.Markup), GameFilesLoad);
     }
 
     [Fact]
@@ -157,7 +186,10 @@ public class ShellTests
     {
         var missing = EditorServiceTests.Start(savesRoot: @"C:\does\not\exist");
         using (var ctx = Context(missing))
-            Assert.Contains(@"No Stoneshard saves found at C:\does\not\exist", ctx.Render<SavePicker>().Markup);
+        {
+            var picker = ctx.Render<SavePicker>();
+            picker.WaitForAssertion(() => Assert.Contains(@"No Stoneshard saves found at C:\does\not\exist", picker.Markup));
+        }
 
         var junk = Directory.CreateTempSubdirectory().FullName;
         File.WriteAllText(Path.Combine(junk, "data.win"), "junk");
@@ -166,7 +198,7 @@ public class ShellTests
         using (var ctx = Context(noGame))
         {
             var cut = ctx.Render<SavePicker>();
-            Assert.Contains("Game files not found", cut.Markup);
+            cut.WaitForAssertion(() => Assert.Contains("Game files not found", cut.Markup));
             Assert.Contains("Choose game folder…", cut.Find("button.choose-game").TextContent);
         }
     }

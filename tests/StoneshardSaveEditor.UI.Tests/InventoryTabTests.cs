@@ -59,6 +59,20 @@ public class InventoryTabTests
     }
 
     [Fact]
+    public void Selection_stays_on_the_item_when_an_earlier_one_is_deleted()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var salve = h.Editor.Current.Items.First(i => i.Name == "o_inv_salve" && i.Charges == 2);
+        cut.Find($".bag [data-index='{salve.Index}']").Click();
+
+        h.Editor.DeleteItem(h.Editor.Current.Items.First(i => i.Name == "o_inv_cheese").Index);
+
+        cut.WaitForAssertion(() => Assert.Equal((salve.Index - 1).ToString(), cut.Find(".bag .it.sel").GetAttribute("data-index")));
+        Assert.Equal("2", cut.Find(".item-detail [data-field='Charges'] input").GetAttribute("value"));
+    }
+
+    [Fact]
     public void Delete_removes_the_selected_item()
     {
         var (h, ctx, cut) = OpenInventory();

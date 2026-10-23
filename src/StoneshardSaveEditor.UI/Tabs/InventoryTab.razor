@@ -151,18 +151,21 @@
         null,
     ];
 
-    private (int Index, string Name)? _selected;
+    /// <summary>Where an item is: its bag cell, or its equipment slot and weapon set. Unlike its list index, this stays
+    /// the same when other items are added or deleted.</summary>
+    private sealed record Place(string Name, bool Equipped, string Slot, int? WeaponSet, int? X, int? Y);
+
+    private static Place PlaceOf(ItemView item) => new(item.Name, item.Equipped, item.Slot, item.WeaponSet, item.X, item.Y);
+
+    private Place? _selected;
     private bool _catalogOpen;
 
-    /// <summary>The selected item, or null once it is gone or another item took its place.</summary>
-    private ItemView? Selected =>
-        _selected is var (index, name) && index < Session.Items.Count && Session.Items[index].Name == name
-            ? Session.Items[index]
-            : null;
+    /// <summary>The selected item, or null once it is gone.</summary>
+    private ItemView? Selected => _selected is null ? null : Session.Items.FirstOrDefault(i => PlaceOf(i) == _selected);
 
-    private bool IsSelected(ItemView item) => _selected == (item.Index, item.Name);
+    private bool IsSelected(ItemView item) => _selected is not null && PlaceOf(item) == _selected;
 
-    private void Select(ItemView item) => _selected = (item.Index, item.Name);
+    private void Select(ItemView item) => _selected = PlaceOf(item);
 
     private RenderFragment GearSlot(string id, string label, bool tall, List<ItemView> items) =>
         @<div class="gear-slot @(tall ? "tall" : "")" data-cell="@id">
@@ -199,8 +202,7 @@
         _catalogOpen = false;
         Edit(() =>
         {
-            var added = EditorService.AddItem(key).Items[^1];
-            _selected = (added.Index, added.Name);
+            _selected = PlaceOf(EditorService.AddItem(key).Items[^1]);
         });
     }
 }

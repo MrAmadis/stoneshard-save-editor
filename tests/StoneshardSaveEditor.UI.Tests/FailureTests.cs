@@ -87,6 +87,26 @@ public class FailureTests
     }
 
     [Fact]
+    public void Restoring_with_unsaved_edits_asks_first()
+    {
+        var h = EditorServiceTests.Start();
+        h.Editor.Open("character_2", "exitsave_1");
+        h.Editor.SetCharacter(CharacterField.Strength, 18);
+        Assert.Equal(SaveResult.Saved, h.Editor.Save());
+        h.Editor.SetCharacter(CharacterField.Strength, 20);
+        using var ctx = ShellTests.Context(h);
+        var cut = ctx.Render<StoneshardSaveEditor.UI.Components.BackupsDialog>();
+
+        cut.Find("button.restore").Click();
+        Assert.Contains("drops your 1 unsaved change", cut.Markup);
+        Assert.Equal(20, h.Editor.Current.Character[CharacterField.Strength]);
+
+        cut.Find("button.confirm-restore").Click();
+        Assert.Equal(13, h.Editor.Current.Character[CharacterField.Strength]);
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
     public void Editor_shows_a_failed_save_as_a_message()
     {
         var h = EditorServiceTests.Start();

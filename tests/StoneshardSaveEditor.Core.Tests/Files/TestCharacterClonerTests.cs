@@ -49,6 +49,19 @@ public class TestCharacterClonerTests
     }
 
     [Fact]
+    public void Clone_refuses_when_every_slot_the_game_lists_is_used()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        foreach (var n in Enumerable.Range(3, 8))
+            Directory.CreateDirectory(Path.Combine(root, $"character_{n}"));
+
+        var error = Assert.Throws<InvalidOperationException>(() => TestCharacterCloner.Clone(root, "character_2", "exitsave_1"));
+
+        Assert.Contains("character_10", error.Message);
+        Assert.False(Directory.Exists(Path.Combine(root, "character_11")));
+    }
+
+    [Fact]
     public void Clone_without_label_keeps_location()
     {
         var root = Fixtures.CopyRealSavesToTemp();

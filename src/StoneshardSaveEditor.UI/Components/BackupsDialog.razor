@@ -8,6 +8,15 @@
         {
             <Banner Kind="error">@_error</Banner>
         }
+        @if (_confirm is { } pending)
+        {
+            var changes = EditorService.Current.ChangeCount;
+            <Banner Kind="warn">
+                <span>Restoring this backup drops your @changes unsaved @(changes == 1 ? "change" : "changes").</span>
+                <button class="btn danger confirm-restore" @onclick="() => Restore(pending, confirmed: true)">Restore anyway</button>
+                <button class="btn" @onclick="() => _confirm = null">Cancel</button>
+            </Banner>
+        }
         @if (_backups.Count == 0)
         {
             <p class="muted">No backups yet.</p>
@@ -31,11 +40,18 @@
 
     private IReadOnlyList<BackupInfo> _backups = [];
     private string? _error;
+    private BackupInfo? _confirm;
 
     protected override void OnInitialized() => _backups = EditorService.Backups();
 
-    private async Task Restore(BackupInfo backup)
+    private async Task Restore(BackupInfo backup, bool confirmed = false)
     {
+        if (!confirmed && EditorService.Current.ChangeCount > 0)
+        {
+            _confirm = backup;
+            return;
+        }
+        _confirm = null;
         try
         {
             EditorService.Restore(backup.Path);

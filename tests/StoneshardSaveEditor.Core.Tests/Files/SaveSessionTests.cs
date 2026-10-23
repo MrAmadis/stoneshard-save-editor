@@ -7,6 +7,23 @@ namespace StoneshardSaveEditor.Tests.Files;
 public class SaveSessionTests
 {
     [Fact]
+    public void Restore_refuses_entries_outside_the_slot_even_with_a_similar_name()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        var slot = new SaveLocator(root).Scan().Single(c => c.Folder == "character_2").Slots.Single(s => s.SlotFolder == "exitsave_1");
+        Directory.CreateDirectory(Path.Combine(root, "character_2", "exitsave_10"));
+        var zip = Path.Combine(Directory.CreateTempSubdirectory().FullName, "evil.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry("../exitsave_10/evil.txt").Open()))
+            writer.Write("x");
+
+        Assert.Throws<InvalidDataException>(() =>
+            new BackupService(Directory.CreateTempSubdirectory().FullName).Restore(new BackupInfo(zip, DateTime.UtcNow), slot));
+
+        Assert.False(File.Exists(Path.Combine(root, "character_2", "exitsave_10", "evil.txt")));
+    }
+
+    [Fact]
     public void A_failed_edit_puts_the_save_back()
     {
         var session = Sessions.OpenVelmir();

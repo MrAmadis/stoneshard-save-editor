@@ -29,6 +29,9 @@
     <ItemGroup>
       <ResolvedFileToPublish Include="@(_PublishStaticWebAssetsTargetPath)" RelativePath="%(_PublishStaticWebAssetsTargetPath.TargetPath)" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
+    <!-- Without them the exe would start with a blank "There is no content at" page; better to stop here. -->
+    <Error Condition="'@(_PublishStaticWebAssetsTargetPath)' == ''"
+           Text="No static web assets to bundle: the .NET SDK's publish targets changed. Update BundleStaticWebAssets in this project." />
   </Target>
 
 </Project>

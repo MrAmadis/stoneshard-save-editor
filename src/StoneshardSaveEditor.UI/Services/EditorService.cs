@@ -31,7 +31,24 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public event Action? Changed;
 
-    public bool IsOpen => _session is not null;
+    public bool IsOpen
+    {
+        get
+        {
+            lock (_lock)
+                return _session is not null;
+        }
+    }
+
+    /// <summary>The open save's slot, read under the lock.</summary>
+    private SlotInfo OpenSlot
+    {
+        get
+        {
+            lock (_lock)
+                return Session.Slot;
+        }
+    }
 
     public SessionView Current
     {
@@ -114,7 +131,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView Reload()
     {
-        var slot = Session.Slot;
+        var slot = OpenSlot;
         return Open(slot.CharacterFolder, slot.SlotFolder);
     }
 
@@ -136,7 +153,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public IReadOnlyList<BackupInfo> Backups()
     {
-        var slot = Session.Slot;
+        var slot = OpenSlot;
         return _backups.List(slot.CharacterFolder, slot.SlotFolder);
     }
 
@@ -149,7 +166,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
             throw new EditRejectedException("Close Stoneshard before restoring a backup");
         try
         {
-            _backups.Restore(backup, Session.Slot);
+            _backups.Restore(backup, OpenSlot);
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
         {

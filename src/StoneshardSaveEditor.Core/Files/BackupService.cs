@@ -45,10 +45,11 @@ public sealed class BackupService(string backupRoot)
     {
         Backup(slot);
         using var archive = ZipFile.OpenRead(backup.Path);
+        var slotDir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(slot.FullPath)) + Path.DirectorySeparatorChar;
         foreach (var entry in archive.Entries)
         {
             var target = Path.GetFullPath(Path.Combine(slot.FullPath, entry.FullName));
-            if (!target.StartsWith(Path.GetFullPath(slot.FullPath), StringComparison.OrdinalIgnoreCase))
+            if (!target.StartsWith(slotDir, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Backup entry {entry.FullName} points outside the slot folder");
             entry.ExtractToFile(target, overwrite: true);
         }
