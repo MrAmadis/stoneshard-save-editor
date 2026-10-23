@@ -376,5 +376,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         public string SpriteFor(string itemName) => GameItemShapes.Missing;
 
         public int MaxStack(string itemName) => 0;
+
+        public string Kind(string itemName) => "";
     }
 }

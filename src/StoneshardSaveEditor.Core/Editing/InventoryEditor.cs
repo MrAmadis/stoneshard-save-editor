@@ -11,6 +11,13 @@ public interface IItemShapeProvider
 
     /// <summary>How many of the item fit in one stack (gold coins 100, bolts 20); 0 when it doesn't stack.</summary>
     int MaxStack(string itemName);
+
+    /// <summary>
+    /// The item's kind from the game tables: a weapon's or armor's <c>Slot</c> (<c>sword</c>, <c>2hsword</c>, <c>Head</c>,
+    /// <c>shield</c>, <c>Ring</c>, …) or another item's <c>Cat</c> (<c>ammo</c>, <c>tool</c>, <c>food</c>, …); "" when the
+    /// tables don't list it.
+    /// </summary>
+    string Kind(string itemName);
 }
 
 public sealed record ItemView(

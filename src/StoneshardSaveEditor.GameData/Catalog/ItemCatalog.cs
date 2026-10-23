@@ -26,7 +26,7 @@ public sealed class ItemCatalog(ExeTables tables, Localization localization, Spr
     /// <summary>The game calls its coins "crowns"; players call them gold.</summary>
     private static readonly Dictionary<string, string> Renamed = new(StringComparer.Ordinal) { ["o_inv_gold"] = "Gold" };
 
-    private readonly GameItemShapes _shapes = new(sprites, objects, tables.ItemsStats);
+    private readonly GameItemShapes _shapes = new(sprites, objects, tables);
 
     public IReadOnlyList<CatalogItem> All(GmObject saveRoot)
     {
