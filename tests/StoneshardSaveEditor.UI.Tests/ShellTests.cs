@@ -188,7 +188,7 @@ public class ShellTests
         using (var ctx = Context(missing))
         {
             var picker = ctx.Render<SavePicker>();
-            picker.WaitForAssertion(() => Assert.Contains(@"No Stoneshard saves found at C:\does\not\exist", picker.Markup));
+            picker.WaitForAssertion(() => Assert.Contains(@"No Stoneshard saves found at C:\does\not\exist", picker.Markup), GameFilesLoad);
         }
 
         var junk = Directory.CreateTempSubdirectory().FullName;
@@ -198,7 +198,7 @@ public class ShellTests
         using (var ctx = Context(noGame))
         {
             var cut = ctx.Render<SavePicker>();
-            cut.WaitForAssertion(() => Assert.Contains("Game files not found", cut.Markup));
+            cut.WaitForAssertion(() => Assert.Contains("Game files not found", cut.Markup), GameFilesLoad);
             Assert.Contains("Choose game folder…", cut.Find("button.choose-game").TextContent);
         }
     }

@@ -13,7 +13,14 @@ public sealed record ExperimentResult(string Folder, string Label, string Purpos
 public static class Experiments
 {
     public const string SourceCharacter = "character_2";
-    public const string SourceSlot = "exitsave_1";
+
+    /// <summary>Velmir's exit save, or his newest other save once the game has consumed it (loading an exit save does).</summary>
+    public static string SourceSlot(string root) =>
+        new SaveLocator(root).Scan().Single(c => c.Folder == SourceCharacter).Slots
+            .Where(s => s.Status == SlotStatus.Ok)
+            .OrderByDescending(s => s.SlotFolder == "exitsave_1")
+            .ThenByDescending(s => s.SavedAtUtc)
+            .First().SlotFolder;
 
     private static readonly string[] BagJunk =
         ["o_inv_cheese", "o_inv_goatcheese_rot", "o_inv_antitoxin_empty", "o_inv_potion04_empty", "o_inv_morion"];
@@ -123,7 +130,7 @@ public static class Experiments
 
         public void Make(string label, string purpose, Action<SaveSession> apply)
         {
-            var folder = TestCharacterCloner.Clone(_root, SourceCharacter, SourceSlot, label, minutesLater: Results.Count + 1);
+            var folder = TestCharacterCloner.Clone(_root, SourceCharacter, SourceSlot(_root), label, minutesLater: Results.Count + 1);
             var slot = new SaveLocator(_root).Scan().Single(c => c.Folder == folder).Slots.Single();
             var session = SaveSession.Open(slot);
             apply(session);
@@ -221,7 +228,7 @@ public static class Experiments
     /// <summary>Volume I of every tree that is still closed on Velmir: nothing learned and nothing unlocked.</summary>
     private static List<string> ClosedTreeTreatises(string root, GameServices game)
     {
-        var file = Path.Combine(root, SourceCharacter, SourceSlot, "data.sav");
+        var file = Path.Combine(root, SourceCharacter, SourceSlot(root), "data.sav");
         var saveRoot = (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(file)).Json);
         var state = SkillsEditor.ReadFrom(saveRoot).ToDictionary(s => s.Object);
         return game.SkillsFor(saveRoot).Trees

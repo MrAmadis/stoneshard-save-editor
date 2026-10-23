@@ -62,6 +62,17 @@ public class TestCharacterClonerTests
     }
 
     [Fact]
+    public void Clone_with_a_missing_source_creates_nothing()
+    {
+        var root = Fixtures.CopyRealSavesToTemp();
+        Directory.Delete(Path.Combine(root, "character_2", "exitsave_1"), recursive: true);
+
+        Assert.Throws<FileNotFoundException>(() => TestCharacterCloner.Clone(root, "character_2", "exitsave_1"));
+
+        Assert.False(Directory.Exists(Path.Combine(root, "character_3")));
+    }
+
+    [Fact]
     public void Clone_without_label_keeps_location()
     {
         var root = Fixtures.CopyRealSavesToTemp();

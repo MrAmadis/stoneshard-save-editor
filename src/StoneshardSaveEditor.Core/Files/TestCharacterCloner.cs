@@ -30,6 +30,9 @@ public static class TestCharacterCloner
                 $"Every character slot the game lists (character_{FirstTestCharacter} to character_{LastListedCharacter}) is in use; delete a test character first");
         var character = $"character_{next}";
         var sourceSlot = Path.Combine(root, fromCharacter, fromSlot);
+        foreach (var required in new[] { Path.Combine(root, fromCharacter, "character.map"), Path.Combine(sourceSlot, "save.map"), Path.Combine(sourceSlot, "data.sav") })
+            if (!File.Exists(required))
+                throw new FileNotFoundException($"Can't copy {fromCharacter}/{fromSlot}: {Path.GetFileName(required)} is missing", required);
         var targetSlot = Path.Combine(root, character, TargetSlot);
         Directory.CreateDirectory(targetSlot);
 

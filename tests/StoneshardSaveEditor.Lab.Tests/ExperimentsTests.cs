@@ -131,6 +131,22 @@ public class ExperimentsTests
         Assert.False(state["o_pass_skill_battle_trance"].Locked); // Staves opened as Volume I does
     }
 
+    [Fact]
+    public void Experiments_copy_Velmirs_newest_save_when_the_exit_save_is_gone()
+    {
+        // Loading an exit save in the game consumes it (sessions A-C); the owner's Velmir has none now.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        Directory.Delete(Path.Combine(root, "character_2", "exitsave_1"), recursive: true);
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionD(root, Game.Value, backups, new FakeProbe(false)).Single();
+
+        var save2 = (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(Path.Combine(root, "character_2", "save_2", "data.sav"))).Json);
+        var clone = Load(root, made.Folder);
+        Assert.Equal(((GmObject)save2["characterDataMap"]!)["XP"]!.AsDouble(), ((GmObject)clone["characterDataMap"]!)["XP"]!.AsDouble());
+    }
+
     private static IEnumerable<(double Coins, double Cached)> Purses(GmObject root) =>
         ((GmArray)root["inventoryDataList"]!).Items.Cast<GmArray>()
         .Where(e => ((GmString)e.Items[0]).Value == "o_inv_moneybag")
