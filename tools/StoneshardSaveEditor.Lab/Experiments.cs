@@ -63,6 +63,39 @@ public static class Experiments
         return batch.Results;
     }
 
+    /// <summary>
+    /// Test character for in-game session D: does a skill with lines from two places need both, as "Follow game rules"
+    /// assumes (Task 13 ruling)? Each tree has everything but one of those lines learned; the game recomputes the locks
+    /// on load, so the owner sees whether the skill is available.
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionD(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Denbrie",
+            "D1: is the skill available? Shields: Shield Bash (Breakthrough learned, Moment of Retribution not). Staves: Now or Never, " +
+            "Unwavering Stance, Triumph (Hail of Blows + Step Aside! learned). Polearms: Regroup, One at a Time! (all but Determination " +
+            "and No Retreat learned). Athletics: Elusiveness (Disengage + Dash learned, Inner Reserves not)",
+            s => RulesCheck(s, game));
+        return batch.Results;
+    }
+
+    private static void RulesCheck(SaveSession s, GameServices game)
+    {
+        var catalog = game.SkillsFor(s.Root);
+        var skills = new SkillsEditor(s);
+        var staves = catalog.Trees.Single(t => t.Id == "staff");
+        skills.UnlockTree(catalog.UnlockSet(staves.Id), $"treatise_{staves.TreatisePrefix}1");
+        void Learn(string tree, params string[] names)
+        {
+            foreach (var name in names)
+                skills.Learn(catalog.Trees.Single(t => t.Id == tree).Skills.Single(k => k.DisplayName == name).Object, spendPoint: false);
+        }
+        Learn("shield", "Breakthrough");
+        Learn("staff", "Hail of Blows", "Step Aside!");
+        Learn("spear", "Precise Hits", "Pikeman Stance", "Nail Down", "Impaling Lunge", "Wounding Spearhead");
+        Learn("athletic", "Disengage", "Dash");
+    }
+
     private static void SetGold(SaveSession s, GameServices game, int amount) =>
         new InventoryEditor(s, game.Shapes).SetGold(amount,
             () => game.Catalog.CreateEntry("o_inv_moneybag", s.Root), () => game.Catalog.CreateEntry("o_inv_gold", s.Root));

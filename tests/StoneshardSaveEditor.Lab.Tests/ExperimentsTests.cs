@@ -113,6 +113,24 @@ public class ExperimentsTests
         Assert.All(Purses(Load(root, made[1].Folder)), p => Assert.Equal(p.Coins, p.Cached));
     }
 
+    [Fact]
+    public void Session_D_builds_the_rules_check_character()
+    {
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionD(root, Game.Value, backups, new FakeProbe(false)).Single();
+
+        var state = SkillsEditor.ReadFrom(Load(root, made.Folder)).ToDictionary(s => s.Object);
+        var learned = Game.Value.SkillsFor(Load(root, made.Folder)).Trees
+            .Where(t => t.Id is "shield" or "staff" or "spear" or "athletic")
+            .SelectMany(t => t.Skills).Where(s => state[s.Object].Learned).Select(s => s.DisplayName).Order().ToList();
+        Assert.Equal(new[] { "Breakthrough", "Dash", "Disengage", "Hail of Blows", "Impaling Lunge", "Nail Down", "Pikeman Stance",
+            "Precise Hits", "Step Aside!", "Wounding Spearhead" }, learned);
+        Assert.False(state["o_pass_skill_battle_trance"].Locked); // Staves opened as Volume I does
+    }
+
     private static IEnumerable<(double Coins, double Cached)> Purses(GmObject root) =>
         ((GmArray)root["inventoryDataList"]!).Items.Cast<GmArray>()
         .Where(e => ((GmString)e.Items[0]).Value == "o_inv_moneybag")
