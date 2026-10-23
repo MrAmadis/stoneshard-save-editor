@@ -78,10 +78,25 @@ The four patterns session D's reading predicted but hadn't tested. Built with `L
 | Armored Combat: Brace for Impact!, Flexible Defense | Battering Ram learnable. | As read: any one of the row above. |
 | Arcanistics: Dimensional Shift, then Arcane Might | Dimensional Shift opened Schism and Transcendental Anchoring but not Time Echo or Aether Shield; Arcane Might then opened Aether Shield. | Time Echo needs Wormhole. Wormhole's line ends at Schism, where it meets Dimensional Shift's head-on, so Aether Shield needs Dimensional Shift and Arcane Might. |
 
-So: a skill with a dot on its line needs every skill whose line runs into the dot; any other skill needs any one of the skills whose lines run into it. Which lines run where shows in the corners where a line meets a bar (zoomed screenshots): a corner above the bar turns a line into it, one below turns the bar's line down into a skill. Re-read that way, without in-game checks yet: Greatmaces' and Electromancy's last rows need all four skills above (as Axes); Heroic Charge needs all four of Greatswords' second row and Courage needs Fight to the Death; Mana Crystal needs Schism and Transcendental Anchoring; Huntmaster needs Resourcefulness and Will to Survive needs First Aid.
+So: a skill with a dot on its line needs every skill whose line runs into the dot; any other skill needs any one of the skills whose lines run into it. Which lines run where shows in the corners where a line meets a bar (zoomed screenshots): a corner above the bar turns a line into it, one below turns the bar's line down into a skill. Re-read that way (all confirmed in session F): Greatmaces' and Electromancy's last rows need all four skills above (as Axes); Heroic Charge needs all four of Greatswords' second row and Courage needs Fight to the Death; Mana Crystal needs Schism and Transcendental Anchoring; Huntmaster needs Resourcefulness and Will to Survive needs First Aid.
+
+## Session F — 2026-10-23
+
+The patterns session E re-read. `character_5` reset with `Lab reset-skills` (every treatise read, only starting skills, 100 points), loaded from its regular `save_1`.
+
+| Check | Observation (owner) |
+|---|---|
+| Greatswords: Heroic Charge needs Recklessness, Feast of Steel, Arc Cleave and Fight to the Death; Courage opens with Fight to the Death alone | Correct |
+| Greatmaces: each second-row skill needs all four of the first row | Correct |
+| Electromancy: the last row needs all four of the third row | Correct |
+| Arcanistics: Mana Crystal needs Schism and Transcendental Anchoring (not Aether Shield); Stasis opens with either Transcendental Anchoring or Aether Shield | Correct |
+| Survival: Huntmaster needs Resourcefulness, Will to Survive needs First Aid | Correct |
+
+Every reading of the 21 trees has now held in-game.
+
+Test characters are now written as `save_1` instead of `exitsave_1`, since loading an exit save consumes it; `Lab keep-save` copies a played test character's slot to its next `save_N`.
 
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
-- Session E's re-read patterns above (no in-game check yet).
-- Test characters are now written as `save_1` instead of `exitsave_1`, so loading one no longer consumes it; `Lab keep-save` copies a played test character's slot to its next `save_N` (done for `character_5`). Not yet seen: the game listing a character whose only save is `save_1`.
+- That the game keeps a test character's `save_1` when it loads it (after session F `character_5/save_1` was untouched, but it isn't known which save was loaded).

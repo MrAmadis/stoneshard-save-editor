@@ -114,6 +114,22 @@ public class SkillTreesDataTests
     [InlineData("arcanistics", "Dimensional Shift", "Time Echo", false)]
     [InlineData("arcanistics", "Dimensional Shift", "Aether Shield", false)]
     [InlineData("arcanistics", "Dimensional Shift, Arcane Might", "Aether Shield", true)]
+    // Session F.
+    [InlineData("2hsword", "Hewing Strike, Recklessness, Revanche, Feast of Steel, Arc Cleave", "Heroic Charge", false)]
+    [InlineData("2hsword", "Hewing Strike, Recklessness, Revanche, Feast of Steel, Arc Cleave, Parry, Fight to the Death", "Heroic Charge", true)]
+    [InlineData("2hsword", "Parry, Fight to the Death", "Courage", true)]
+    [InlineData("2hmace", "Keep Them Coming, Mighty Swing, Unstoppable Force", "Striker Stance", false)]
+    [InlineData("2hmace", "Keep Them Coming, Mighty Swing, Unstoppable Force, Unbalance", "Striker Stance", true)]
+    [InlineData("electromancy", "Chain Lightning, Unlimited Power, Conductivity", "Chain Reaction", false)]
+    [InlineData("electromancy", "Chain Lightning, Unlimited Power, Conductivity, Ball Lightning", "Chain Reaction", true)]
+    [InlineData("arcanistics", "Schism, Transcendental Anchoring", "Mana Crystal", true)]
+    [InlineData("arcanistics", "Schism, Aether Shield", "Mana Crystal", false)]
+    [InlineData("arcanistics", "Transcendental Anchoring", "Stasis", true)]
+    [InlineData("arcanistics", "Aether Shield", "Stasis", true)]
+    [InlineData("survival", "Pathfinder", "Huntmaster", false)]
+    [InlineData("survival", "Resourcefulness", "Huntmaster", true)]
+    [InlineData("survival", "Austerity", "Will to Survive", false)]
+    [InlineData("survival", "First Aid", "Will to Survive", true)]
     public void Lines_decide_what_is_learnable_once_every_book_is_read(string treeId, string learned, string skill, bool learnable)
     {
         var tree = TreesWithTreatise().Single(t => t.Id == treeId);
