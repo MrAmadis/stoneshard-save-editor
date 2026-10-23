@@ -1,6 +1,7 @@
 using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.Core.Files;
 using StoneshardSaveEditor.Core.Json;
+using StoneshardSaveEditor.GameData;
 
 namespace StoneshardSaveEditor.Lab;
 
@@ -99,15 +100,22 @@ public static class Experiments
             "the worn gear, both weapon sets work, and nothing doubled or disappeared",
             s => MovedGear(s, game));
         batch.Make("Mannshire",
-            "G2 (sling and bullets, lute, pickaxe, chain, sickle, bow and arrows, torch in the bag): equip each item in the game and " +
+            "G2 (sling, bullets if the save has some to copy, lute, pickaxe, chain, sickle, bow and arrows, torch in the bag): equip each item in the game and " +
             "note which slot it goes to; does the sling take the bullets as the crossbow takes bolts?",
-            s => FillBagWith(s, game, OpenKinds));
+            s => FillBagWith(s, game, Suppliable(s, game, OpenKinds)));
         return batch.Results;
     }
 
     /// <summary>Biggest first, so first-fit packs all nine into the 10 × 5 bag.</summary>
     private static readonly string[] OpenKinds =
         ["Lute", "Pickaxe", "Chain", "Makeshift Sling", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch", "o_inv_ammo_bullet"];
+
+    /// <summary>The items the catalog can make for this save: built from the tables, or copied from one already in it.</summary>
+    private static List<string> Suppliable(SaveSession s, GameServices game, IEnumerable<string> keys)
+    {
+        var available = game.Catalog.All(s.Root).Where(i => i.Availability != CatalogAvailability.Unavailable).Select(i => i.Key).ToHashSet();
+        return keys.Where(available.Contains).ToList();
+    }
 
     private static void MovedGear(SaveSession s, GameServices game)
     {

@@ -171,6 +171,42 @@ public class ExperimentsTests
         Assert.Equal("o_inv_head", SlotOf(Named(Load(root, made[0].Folder), "Hood")));
     }
 
+    private static void RemoveEverywhere(GmNode node, string itemName)
+    {
+        switch (node)
+        {
+            case GmArray array:
+                array.Items.RemoveAll(n => n is GmArray { Items.Count: > 0 } e && e.Items[0] is GmString s && s.Value == itemName);
+                foreach (var child in array.Items)
+                    RemoveEverywhere(child, itemName);
+                break;
+            case GmObject obj:
+                foreach (var (_, child) in obj.Entries)
+                    RemoveEverywhere(child, itemName);
+                break;
+        }
+    }
+
+    [Fact]
+    public void Session_G_skips_what_the_save_cant_supply()
+    {
+        // The live Velmir has no sling bullet to copy, and the catalog can't build one from the tables.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+        var slot = new SaveLocator(root).Scan().Single(c => c.Folder == "character_2").Slots.Single(s => s.SlotFolder == "exitsave_1");
+        var source = SaveSession.Open(slot);
+        source.Apply(() => RemoveEverywhere(source.Root, "o_inv_ammo_bullet"));
+        source.MarkChanged();
+        Assert.Equal(SaveResult.Saved, source.Save(backups, new FakeProbe(false)));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        var g2 = Load(root, made[1].Folder);
+        Assert.Equal("N/A", SlotOf(Named(g2, "Makeshift Sling")));
+        Assert.DoesNotContain(((GmArray)g2["inventoryDataList"]!).Items.Cast<GmArray>(), e => ((GmString)e.Items[0]).Value == "o_inv_ammo_bullet");
+    }
+
     [Fact]
     public void Session_D_builds_the_rules_check_character()
     {
