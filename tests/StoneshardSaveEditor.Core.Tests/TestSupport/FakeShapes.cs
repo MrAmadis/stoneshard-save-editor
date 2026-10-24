@@ -20,7 +20,7 @@ internal sealed class FakeShapes : IItemShapeProvider
         ["Velmir Ring"] = "Ring", ["Antique Copper Ring"] = "Ring", ["Voulge"] = "2haxe", ["Guard Crossbow"] = "crossbow",
         ["o_inv_leafshaped_bolts"] = "ammo",
         // Test-only gear, 1×1.
-        ["Peasant Hat"] = "Head", ["Board Shield"] = "shield",
+        ["Peasant Hat"] = "Head", ["Board Shield"] = "shield", ["Arna Sword"] = "sword",
     };
 
     public (int W, int H) Footprint(string itemName) => Sizes.GetValueOrDefault(itemName, (1, 1));

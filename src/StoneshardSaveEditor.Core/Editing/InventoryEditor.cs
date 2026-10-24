@@ -237,42 +237,63 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
     private MovePlan PlanMove(int index, ItemPlace to)
     {
         var item = ViewAt(index);
+        var kind = shapes.Kind(item.Name);
         var from = item.Place;
         if (!to.IsBag && !IsHand(to.Slot))
             to = ItemPlace.Worn(to.Slot);
+        else if (to.Slot == GearRules.LeftHand && GearRules.IsTwoHanded(kind))
+            to = ItemPlace.Worn(GearRules.RightHand, to.WeaponSet); // the game takes a two-handed item on either hand (session G2)
         if (from == to)
             return new MovePlan(null, [], null);
 
+        var worn = Read().Where(i => i.Equipped && i.Index != index).GroupBy(i => i.Place).ToDictionary(g => g.Key, g => g.First());
         if (to.IsBag)
-            return Grid(except: index).Fits(to.X, to.Y, item.W, item.H)
-                ? new MovePlan(null, [(index, to)], null)
-                : MovePlan.Refused("There's no room there");
+            return !Grid(except: index).Fits(to.X, to.Y, item.W, item.H)
+                ? MovePlan.Refused("There's no room there")
+                : Checked(new MovePlan(null, [(index, to)], null), worn, from, to);
 
-        if (!GearRules.SlotsFor(shapes.Kind(item.Name), item.Name).Contains(to.Slot))
+        if (!GearRules.SlotsFor(kind, item.Name).Contains(to.Slot))
             return MovePlan.Refused("That doesn't go there");
 
-        var worn = Read().Where(i => i.Equipped && i.Index != index).GroupBy(i => i.Place).ToDictionary(g => g.Key, g => g.First());
         var occupant = worn.GetValueOrDefault(to);
         worn[to] = item;
         if (HandRefusal(item, to, worn) is { } why)
             return MovePlan.Refused(why);
         if (occupant is null)
-            return new MovePlan(null, [(index, to)], null);
+            return Checked(new MovePlan(null, [(index, to)], null), worn, from, to);
 
         // The item already there trades places if it can, else comes off into the bag.
         if (!from.IsBag && GearRules.SlotsFor(shapes.Kind(occupant.Name), occupant.Name).Contains(from.Slot))
         {
             worn[from] = occupant;
             if (HandRefusal(occupant, from, worn) is null)
-                return new MovePlan(null, [(index, to), (occupant.Index, from)], null);
+                return Checked(new MovePlan(null, [(index, to), (occupant.Index, from)], null), worn, from, to);
+            worn.Remove(from);
         }
         var grid = Grid(except: index);
         (int X, int Y)? spot = from.IsBag && grid.Fits(from.X, from.Y, occupant.W, occupant.H)
             ? (from.X, from.Y)
             : grid.FirstFit(occupant.W, occupant.H);
-        return spot is { } s
+        return Checked(spot is { } s
             ? new MovePlan(null, [(index, to), (occupant.Index, ItemPlace.InBag(s.X, s.Y))], null)
-            : new MovePlan(null, [(index, to)], occupant.Index);
+            : new MovePlan(null, [(index, to)], occupant.Index), worn, from, to);
+    }
+
+    /// <summary>
+    /// Refuses a plan that would leave ammunition in a weapon set the move touched without the weapon that shoots it;
+    /// <paramref name="worn"/> is the gear as the plan leaves it.
+    /// </summary>
+    private MovePlan Checked(MovePlan plan, Dictionary<ItemPlace, ItemView> worn, ItemPlace from, ItemPlace to)
+    {
+        foreach (var set in new[] { from, to }.Where(p => IsHand(p.Slot)).Select(p => p.WeaponSet).Distinct())
+        {
+            if (worn.GetValueOrDefault(ItemPlace.Worn(GearRules.LeftHand, set)) is not { } left || shapes.Kind(left.Name) != "ammo")
+                continue;
+            var right = worn.GetValueOrDefault(ItemPlace.Worn(GearRules.RightHand, set));
+            if (right is null || !GearRules.Shoots(shapes.Kind(right.Name), left.Name))
+                return MovePlan.Refused("Take the ammunition off first");
+        }
+        return plan;
     }
 
     /// <summary>Why <paramref name="item"/> can't be held at <paramref name="at"/> next to the set's other hand, or null.</summary>
@@ -310,7 +331,12 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         var set = hand ? to.WeaponSet : 0;
         entry.Items[F2Index] = GmNumber.From(-4);
         entry.Items[CellIndex] = GmNumber.From(-4);
-        entry.Items[F7Index] = !hand || set == activeSet ? new GmBool(true) : GmNumber.From(0);
+        // Worn gear is marked in use; in the active weapon set the game marks the left hand 2 (Jorgrim's off-hand axe,
+        // character_7's sling stones), and the other set's hands 0.
+        entry.Items[F7Index] = !hand ? new GmBool(true)
+            : set != activeSet ? GmNumber.From(0)
+            : to.Slot == GearRules.LeftHand ? GmNumber.From(2)
+            : new GmBool(true);
         entry.Items[WeaponSetIndex] = GmNumber.From(set);
         entry.Items[SlotIndex] = GmString.From(to.Slot);
     }
