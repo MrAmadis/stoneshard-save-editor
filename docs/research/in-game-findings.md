@@ -96,7 +96,19 @@ Every reading of the 21 trees has now held in-game.
 
 Test characters are now written as `save_1` instead of `exitsave_1`, since loading an exit save consumes it; `Lab keep-save` copies a played test character's slot to its next `save_N`.
 
+## Session G — 2026-10-24
+
+Inventory drag and drop (spec `docs/superpowers/specs/2026-10-23-inventory-drag-and-drop-design.md` §7). Built with `Lab make-session-g` from Velmir's newest save as `character_6` and `character_7`, both regular `save_1` saves.
+
+| Character | What the editor did | Observation (owner) | Decision |
+|---|---|---|---|
+| G1 `character_6` | Bag emptied but for a purse and a torch; helmet off into the bag, Hood on, rings swapped, crossbow and bolts moved to the first weapon set and the Voulge to the second, purse and torch moved | "It works" | The game takes gear the editor moves: worn entries written as `f2` −4, `cell` −4, `f7` true (non-hand slots and the active set's hands) or 0 (the other set), `weaponSet`, `slot`. The drag and drop UI goes ahead. |
+| G2 `character_7` | Sling, lute, pickaxe, chain, sickle, bow, arrows and a torch in the bag (no sling bullets: the live save has none to copy) | "It works" | Which slot each goes to wasn't reported, so the editor keeps refusing to put these kinds on (spec §5.1) until it is. |
+
+The Voulge's kind in the game's tables is `2haxe`, not `spear`.
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
+- Session G: which slot slings, lutes, picks, chains, sickles, torches, bows with arrows take in the game.
 - That the game keeps a test character's `save_1` when it loads it (after session F `character_5/save_1` was untouched, but it isn't known which save was loaded).
