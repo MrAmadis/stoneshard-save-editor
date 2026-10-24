@@ -329,6 +329,48 @@ public class InventoryMoveTests
     }
 
     [Fact]
+    public void A_non_hand_slot_saved_with_set_1_still_counts_as_that_slot()
+    {
+        var (s, inv) = Open();
+        Entry(s, Index(inv, "Fang Pendant")).Items[WeaponSet] = GmNumber.From(1);
+
+        Assert.Equal(ItemPlace.Worn(GearRules.Neck), Item(inv, "Fang Pendant").Place);
+    }
+
+    [Fact]
+    public void Only_two_weapon_sets_exist()
+    {
+        var (_, inv) = Open();
+
+        Assert.Equal("That doesn't go there", inv.Refusal(Index(inv, "Voulge"), ItemPlace.Worn(GearRules.RightHand, 2)));
+    }
+
+    [Fact]
+    public void A_real_autosave_with_true_and_false_reads_the_right_sets()
+    {
+        // The game's autosaves write weaponSet and f7 as true/false (final review).
+        var s = Sessions.Open("character_2", "autosave_1");
+        var inv = new InventoryEditor(s, new FakeShapes());
+
+        Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 0), Item(inv, "Voulge").Place);
+        Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 1), Item(inv, "Guard Crossbow").Place);
+        Assert.Equal(ItemPlace.Worn(GearRules.LeftHand, 1), Item(inv, "o_inv_leafshaped_bolts").Place);
+        inv.Move(Index(inv, "Voulge"), ItemPlace.Worn(GearRules.RightHand, 0));
+        Assert.Equal(0, s.ChangeCount);
+    }
+
+    [Fact]
+    public void A_drop_that_changes_nothing_is_known_before_moving()
+    {
+        var (s, inv) = Open();
+
+        Assert.False(inv.WouldMove(Index(inv, "Flat Kettle Helmet"), ItemPlace.Worn(GearRules.Head)));
+        Assert.False(inv.WouldMove(Index(inv, "Voulge"), ItemPlace.Worn(GearRules.LeftHand, 0))); // its own set: the right hand
+        Assert.True(inv.WouldMove(Index(inv, "Velmir Ring"), ItemPlace.Worn(GearRules.Ring2)));
+        Assert.Equal(0, s.ChangeCount);
+    }
+
+    [Fact]
     public void A_save_with_two_items_in_one_slot_still_moves()
     {
         var (s, inv) = Open();

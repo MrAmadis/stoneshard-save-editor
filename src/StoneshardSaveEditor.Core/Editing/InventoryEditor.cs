@@ -26,7 +26,10 @@ public sealed record ItemView(
     double? Charges, double? MaxCharges, double? Stack, double? Count, double? Durability, double? MaxDurability,
     bool IsGear, string Sprite)
 {
-    public ItemPlace Place => Equipped ? ItemPlace.Worn(Slot, WeaponSet ?? 0) : ItemPlace.InBag(X ?? -1, Y ?? -1);
+    /// <summary>Where it sits; only the hands have weapon sets, whatever a save records for other slots.</summary>
+    public ItemPlace Place => Equipped
+        ? ItemPlace.Worn(Slot, Slot is GearRules.RightHand or GearRules.LeftHand ? WeaponSet ?? 0 : 0)
+        : ItemPlace.InBag(X ?? -1, Y ?? -1);
 }
 
 /// <summary>
@@ -112,6 +115,9 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
 
     /// <summary>Why <paramref name="index"/> can't move to <paramref name="to"/>, or null when it can (spec §5).</summary>
     public string? Refusal(int index, ItemPlace to) => PlanMove(index, to).Refusal;
+
+    /// <summary>Whether moving <paramref name="index"/> to <paramref name="to"/> is allowed and changes anything.</summary>
+    public bool WouldMove(int index, ItemPlace to) => PlanMove(index, to) is { Refusal: null, Steps.Count: > 0 };
 
     /// <summary>
     /// Moves an item within the bag, onto an equipment slot or off it. An item already in the target slot trades places
@@ -243,6 +249,8 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
             to = ItemPlace.Worn(to.Slot);
         else if (to.Slot == GearRules.LeftHand && GearRules.IsTwoHanded(kind))
             to = ItemPlace.Worn(GearRules.RightHand, to.WeaponSet); // the game takes a two-handed item on either hand (session G2)
+        if (!to.IsBag && IsHand(to.Slot) && to.WeaponSet is not (0 or 1))
+            return MovePlan.Refused("That doesn't go there");
         if (from == to)
             return new MovePlan(null, [], null);
 
