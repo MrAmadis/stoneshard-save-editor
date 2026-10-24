@@ -316,4 +316,36 @@ public class EditorServiceTests
         Assert.Equal("That doesn't go there", h.Editor.MoveRefusal(helmet.Index, ItemPlace.Worn(GearRules.Feet)));
         Assert.Equal(0, h.Editor.Current.ChangeCount);
     }
+
+    [Fact]
+    public void Dropping_an_item_where_it_is_does_no_edit()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        h.Editor.Open("character_2", "exitsave_1");
+        var changed = 0;
+        h.Editor.Changed += () => changed++;
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+
+        var result = h.Editor.MoveItem(helmet.Index, ItemPlace.Worn(GearRules.Head));
+
+        Assert.Equal(new MoveResult(helmet.Index, null), result);
+        Assert.Equal(0, changed);
+    }
+
+    [Fact]
+    public void In_a_read_only_save_nothing_can_be_moved()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        var mapFile = Path.Combine(h.Root, "character_2", "save_1", "save.map");
+        var map = (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(mapFile)).Json);
+        map.Set("wipeVersion", GmString.From("0.10"));
+        File.WriteAllBytes(mapFile, SaveCodec.Encode(GmJson.Write(map), Salt.For(SaveFileKind.SlotFile, "character_2", "save_1")));
+        h.Editor.Open("character_2", "save_1");
+        var head = h.Editor.Current.Items.First(i => i.Slot == GearRules.Head);
+        var spot = h.Editor.Current.Items.Where(i => i.Equipped).First(i => i.Slot == GearRules.Ring1);
+
+        Assert.StartsWith("This save is read-only", h.Editor.MoveRefusal(head.Index, ItemPlace.Worn(GearRules.Head)));
+        Assert.StartsWith("This save is read-only", h.Editor.MoveRefusal(spot.Index, ItemPlace.Worn(GearRules.Ring2)));
+    }
 }
+

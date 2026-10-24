@@ -200,6 +200,11 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
     /// <summary>Moves an item in the bag or on and off the character (spec §5); see <see cref="InventoryEditor.Move"/>.</summary>
     public MoveResult MoveItem(int index, ItemPlace to)
     {
+        lock (_lock)
+        {
+            if (!Session.ReadOnly && Inventory(Session).Refusal(index, to) is null && !Inventory(Session).WouldMove(index, to))
+                return new MoveResult(index, null); // dropped where it already is: no edit at all
+        }
         MoveResult? result = null;
         Edit(s => result = Inventory(s).Move(index, to));
         return result!;
@@ -209,7 +214,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
     public string? MoveRefusal(int index, ItemPlace to)
     {
         lock (_lock)
-            return Inventory(Session).Refusal(index, to);
+            return Session.ReadOnly ? $"This save is read-only: {Session.ReadOnlyReason}" : Inventory(Session).Refusal(index, to);
     }
 
     public SessionView DuplicateItem(int index) => Edit(s =>
