@@ -110,6 +110,43 @@ public static class Experiments
     private static readonly string[] OpenKinds =
         ["Lute", "Pickaxe", "Chain", "Makeshift Sling", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch", "o_inv_ammo_bullet"];
 
+    /// <summary>
+    /// Test character for in-game session H, the checks left after session G: a fresh arrow stack equipped by the editor
+    /// (worn bolts show <c>f4</c> 5, a new stack 0), a shield in a hand, and whether ammunition stays in a hand once its
+    /// weapon comes off (the editor refuses that for now).
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionH(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook",
+            "H1 (bag emptied but for the purse; a bow with a fresh stack of arrows put on by the editor in weapon set 1, a sword and " +
+            "a shield in set 2): shoot a few arrows; switch to set 2 and block with the shield; then take the bow off in the game: " +
+            "do the arrows stay in the off-hand?",
+            s => BowAndShield(s, game));
+        return batch.Results;
+    }
+
+    private static void BowAndShield(SaveSession s, GameServices game)
+    {
+        var inv = new InventoryEditor(s, game.Shapes);
+        var purse = inv.Read().FirstOrDefault(i => i.Name == "o_inv_moneybag" && !i.Equipped)?.Index;
+        foreach (var item in inv.Read().Where(i => !i.Equipped && i.Index != purse).OrderByDescending(i => i.Index))
+            inv.Delete(item.Index);
+        void ToFreeSpot(string name)
+        {
+            var item = inv.Read().First(i => i.Name == name);
+            var spot = inv.FirstFit(item.W, item.H) ?? throw new InvalidOperationException($"No room in the bag for {name}");
+            inv.Move(item.Index, ItemPlace.InBag(spot.X, spot.Y));
+        }
+
+        ToFreeSpot("o_inv_leafshaped_bolts");
+        ToFreeSpot("Guard Crossbow");
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Peasant Bow", s.Root)), ItemPlace.Worn(GearRules.RightHand, 0));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("o_inv_arrows", s.Root)), ItemPlace.Worn(GearRules.LeftHand, 0));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Arna Sword", s.Root)), ItemPlace.Worn(GearRules.RightHand, 1));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Board Shield", s.Root)), ItemPlace.Worn(GearRules.LeftHand, 1));
+    }
+
     /// <summary>The items the catalog can make for this save: built from the tables, or copied from one already in it.</summary>
     private static List<string> Suppliable(SaveSession s, GameServices game, IEnumerable<string> keys)
     {

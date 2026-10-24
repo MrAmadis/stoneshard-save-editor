@@ -26,6 +26,7 @@ try
         "make-session-c" => MakeSessionC(options),
         "make-session-d" => MakeSessionD(options),
         "make-session-g" => MakeSessionG(options),
+        "make-session-h" => MakeSessionH(options),
         "extract-unlocks" => ExtractUnlocks(options),
         "watch" => WatchSaves(options),
         _ => Usage(),
@@ -74,6 +75,15 @@ static int MakeSessionB(Dictionary<string, string> o)
         Console.WriteLine($"{m.Folder}\t{m.Label}\t{m.Purpose}");
     return 0;
 }
+static int MakeSessionH(Dictionary<string, string> o)
+{
+    var game = GameServices.Load(Required(o, "game"));
+    var made = Experiments.BuildSessionH(Required(o, "root"), game, new BackupService(BackupService.DefaultRoot), new GameProcessProbe());
+    foreach (var m in made)
+        Console.WriteLine($"{m.Folder}	{m.Label}	{m.Purpose}");
+    return 0;
+}
+
 static int MakeSessionG(Dictionary<string, string> o)
 {
     var game = GameServices.Load(Required(o, "game"));
@@ -196,6 +206,7 @@ static int Usage()
           make-session-c       --root <characters_v1> --game <Stoneshard folder>
           make-session-d       --root <characters_v1> --game <Stoneshard folder>
           make-session-g       --root <characters_v1> --game <Stoneshard folder>
+          make-session-h       --root <characters_v1> --game <Stoneshard folder>
           extract-unlocks      --before <data.sav> --after <data.sav> --volume <n> --game <Stoneshard folder> --json <tree-unlocks.json>
           watch                --root <characters_v1> --out <folder>
         """);

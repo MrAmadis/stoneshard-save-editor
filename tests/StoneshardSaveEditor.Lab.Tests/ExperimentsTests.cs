@@ -151,6 +151,25 @@ public class ExperimentsTests
     }
 
     [Fact]
+    public void Session_H_builds_the_bow_and_shield_character()
+    {
+        // The checks left after session G: a fresh arrow stack equipped by the editor, a shield, and stranded ammunition.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionH(root, Game.Value, backups, new FakeProbe(false)).Single();
+
+        var h1 = Load(root, made.Folder);
+        Assert.Equal(("o_inv_right_hand", 0.0), (SlotOf(Named(h1, "Peasant Bow")), Field(Named(h1, "Peasant Bow"), 8)));
+        var arrows = Named(h1, "o_inv_arrows");
+        Assert.Equal(("o_inv_left_hand", 0.0, 2.0), (SlotOf(arrows), Field(arrows, 8), Field(arrows, 7)));
+        Assert.Equal(("o_inv_right_hand", 1.0), (SlotOf(Named(h1, "Arna Sword")), Field(Named(h1, "Arna Sword"), 8)));
+        Assert.Equal(("o_inv_left_hand", 1.0), (SlotOf(Named(h1, "Board Shield")), Field(Named(h1, "Board Shield"), 8)));
+        Assert.All(new[] { "Voulge", "Guard Crossbow", "o_inv_leafshaped_bolts" }, n => Assert.Equal("N/A", SlotOf(Named(h1, n))));
+    }
+
+    [Fact]
     public void Session_G_works_when_the_source_bag_is_full()
     {
         // The live Velmir carries more than the fixture; the first live run found no room to move the torch.
