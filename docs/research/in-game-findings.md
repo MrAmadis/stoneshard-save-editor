@@ -109,9 +109,18 @@ The Voulge's kind in the game's tables is `2haxe`, not `spear`.
 
 The game marks an item in the active weapon set's left hand with `f7` 2: Jorgrim's off-hand axe (his own saves) and `character_7`'s sling stones. The editor writes the same.
 
+## Session H — 2026-10-24
+
+Built with `Lab make-session-h` as `character_8`: bag emptied but for the purse, a bow with a fresh stack of arrows put on by the editor (`f4` 0) in the first weapon set, a sword and a shield in the second.
+
+| Check | Observation (owner) | Decision |
+|---|---|---|
+| Bow with the editor's fresh arrows; sword and shield | "Everything looks good" | Ammunition equipped from a fresh stack (`f4` 0) works; shields go in the left hand. |
+| Taking the bow off in the game | As soon as the bow was dragged the arrows came off, and they stayed off when it went back. | Ammunition comes off with its weapon. The editor does the same instead of refusing the move. |
+| Sword off, then a bow equipped | The shield stayed when the sword came off; equipping the bow took the shield off. | A two-handed item takes the other hand off. The editor does the same instead of refusing; it also takes a two-handed item off when something goes into the other hand (assumed alike, not seen). |
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
-- Session H (`character_8`, built 2026-10-24): a bow with a fresh arrow stack equipped by the editor (`f4` 0); a sword and a shield; whether the arrows stay in the off-hand once the bow comes off (the editor refuses that for now).
 - A wand (the editor can't make one yet).
 - That the game keeps a test character's `save_1` when it loads it (after session F `character_5/save_1` was untouched, but it isn't known which save was loaded).

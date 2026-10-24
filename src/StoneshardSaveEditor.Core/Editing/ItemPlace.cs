@@ -13,5 +13,5 @@ public sealed record ItemPlace(string Slot, int WeaponSet, int X, int Y)
 }
 
 /// <param name="Index">Where the moved item is in the inventory list afterwards.</param>
-/// <param name="Removed">The item that came off with no room left in the bag and was removed (spec §5.3), or null.</param>
-public sealed record MoveResult(int Index, string? Removed);
+/// <param name="Removed">The items that came off with no room left in the bag and were removed (spec §5.3).</param>
+public sealed record MoveResult(int Index, IReadOnlyList<string> Removed);

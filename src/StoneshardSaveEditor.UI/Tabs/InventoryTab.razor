@@ -286,7 +286,7 @@
         {
             var result = EditorService.MoveItem(drag.Index, to);
             _selected = PlaceOf(EditorService.Current.Items[result.Index]);
-            _removed = result.Removed is { } name ? $"{EditorService.ItemName(name)} had no room and was removed" : null;
+            _removed = result.Removed.Count > 0 ? Names.NoRoom(result.Removed.Select(EditorService.ItemName).ToList()) : null;
         });
     }
 

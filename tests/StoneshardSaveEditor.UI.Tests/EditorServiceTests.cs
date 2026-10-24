@@ -280,6 +280,12 @@ public class EditorServiceTests
         Assert.Equal(expected, Names.Pretty(key, null));
 
     [Theory]
+    [InlineData("Voulge", "Voulge had no room and was removed")]
+    [InlineData("Guard Crossbow|Leafshaped Bolts", "Guard Crossbow and Leafshaped Bolts had no room and were removed")]
+    public void Removed_items_read_as_a_sentence(string names, string expected) =>
+        Assert.Equal(expected, Names.NoRoom(names.Split('|')));
+
+    [Theory]
     [InlineData("A", "A")]
     [InlineData("A|B", "A or B")]
     [InlineData("A+B+C", "A, B and C")]
@@ -328,7 +334,8 @@ public class EditorServiceTests
 
         var result = h.Editor.MoveItem(helmet.Index, ItemPlace.Worn(GearRules.Head));
 
-        Assert.Equal(new MoveResult(helmet.Index, null), result);
+        Assert.Equal(helmet.Index, result.Index);
+        Assert.Empty(result.Removed);
         Assert.Equal(0, changed);
     }
 

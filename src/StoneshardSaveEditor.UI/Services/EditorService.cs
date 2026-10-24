@@ -203,7 +203,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         lock (_lock)
         {
             if (!Session.ReadOnly && Inventory(Session).Refusal(index, to) is null && !Inventory(Session).WouldMove(index, to))
-                return new MoveResult(index, null); // dropped where it already is: no edit at all
+                return new MoveResult(index, []); // dropped where it already is: no edit at all
         }
         MoveResult? result = null;
         Edit(s => result = Inventory(s).Move(index, to));

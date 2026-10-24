@@ -141,7 +141,7 @@ public class InventoryMoveTests
 
         var result = inv.Move(copy, ItemPlace.Worn(GearRules.Head));
 
-        Assert.Null(result.Removed);
+        Assert.Empty(result.Removed);
         Assert.Equal(GearRules.Head, Slot(Entry(s, copy)));
         Assert.Equal("N/A", Slot(original));
         Assert.Equal(spot.Y!.Value * InventoryEditor.Columns + spot.X!.Value, Number(original, CellIndex));
@@ -172,7 +172,7 @@ public class InventoryMoveTests
 
         var result = inv.Move(hat, ItemPlace.Worn(GearRules.Head));
 
-        Assert.Equal("Flat Kettle Helmet", result.Removed);
+        Assert.Equal(["Flat Kettle Helmet"], result.Removed);
         Assert.DoesNotContain(inv.Read(), i => i.Name == "Flat Kettle Helmet");
         Assert.Equal("Peasant Hat", inv.Read()[result.Index].Name);
         Assert.True(inv.Read()[result.Index].Equipped);
@@ -190,12 +190,20 @@ public class InventoryMoveTests
     }
 
     [Fact]
-    public void A_two_handed_weapon_needs_the_other_hand_free()
+    public void Equipping_a_two_handed_weapon_takes_the_other_hand_off()
     {
-        var (_, inv) = Open();
+        // Session H: equipping a bow beside a shield took the shield off.
+        var (s, inv) = Open();
+        ToBag(inv, "o_inv_leafshaped_bolts");
+        ToBag(inv, "Guard Crossbow");
+        var spot = inv.FirstFit(1, 1)!.Value;
+        inv.Move(TestGear(s, inv, "Board Shield", spot.X, spot.Y), ItemPlace.Worn(GearRules.LeftHand, 1));
 
-        Assert.Equal("A two-handed weapon needs the other hand free",
-            inv.Refusal(Index(inv, "Voulge"), ItemPlace.Worn(GearRules.RightHand, 1)));
+        var result = inv.Move(Index(inv, "Voulge"), ItemPlace.Worn(GearRules.RightHand, 1));
+
+        Assert.Empty(result.Removed);
+        Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 1), Item(inv, "Voulge").Place);
+        Assert.False(Item(inv, "Board Shield").Equipped);
     }
 
     private static void ToBag(InventoryEditor inv, string name)
@@ -218,7 +226,7 @@ public class InventoryMoveTests
 
         var result = inv.Move(Index(inv, "Arna Sword"), ItemPlace.Worn(GearRules.RightHand, 0));
 
-        Assert.Null(result.Removed);
+        Assert.Empty(result.Removed);
         Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 0), Item(inv, "Arna Sword").Place);
         Assert.False(Item(inv, "Voulge").Equipped); // an axe can't go beside set 2's shield
     }
@@ -251,16 +259,57 @@ public class InventoryMoveTests
     }
 
     [Fact]
-    public void A_move_that_would_strand_ammunition_is_refused()
+    public void Taking_a_bow_off_takes_its_ammunition_off_too()
     {
-        var (s, inv) = Open();
-        var crossbow = Index(inv, "Guard Crossbow");
+        // Session H: as soon as the bow was dragged, the arrows came off, and they stayed off when it went back.
+        var (_, inv) = Open();
         var spot = inv.FirstFit(1, 1)!.Value;
 
-        Assert.Equal("Take the ammunition off first", inv.Refusal(crossbow, ItemPlace.InBag(spot.X, spot.Y)));
-        Assert.Equal("Take the ammunition off first", inv.Refusal(crossbow, ItemPlace.Worn(GearRules.RightHand, 0)));
+        inv.Move(Index(inv, "Guard Crossbow"), ItemPlace.InBag(spot.X, spot.Y));
+
+        Assert.False(Item(inv, "o_inv_leafshaped_bolts").Equipped);
+        Assert.Equal(19, Item(inv, "o_inv_leafshaped_bolts").Count);
+    }
+
+    [Fact]
+    public void Moving_a_bow_to_the_other_set_leaves_its_ammunition_off()
+    {
+        var (_, inv) = Open();
+
+        inv.Move(Index(inv, "Guard Crossbow"), ItemPlace.Worn(GearRules.RightHand, 0));
+
+        Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 0), Item(inv, "Guard Crossbow").Place);
+        Assert.False(Item(inv, "o_inv_leafshaped_bolts").Equipped);
+    }
+
+    [Fact]
+    public void Replacing_a_bow_takes_its_ammunition_off()
+    {
+        var (s, inv) = Open();
+        var spot = inv.FirstFit(1, 1)!.Value;
         var sword = TestGear(s, inv, "Arna Sword", spot.X, spot.Y);
-        Assert.Equal("Take the ammunition off first", inv.Refusal(sword, ItemPlace.Worn(GearRules.RightHand, 1)));
+
+        inv.Move(sword, ItemPlace.Worn(GearRules.RightHand, 1));
+
+        Assert.Equal(ItemPlace.Worn(GearRules.RightHand, 1), Item(inv, "Arna Sword").Place);
+        Assert.False(Item(inv, "Guard Crossbow").Equipped);
+        Assert.False(Item(inv, "o_inv_leafshaped_bolts").Equipped);
+    }
+
+    [Fact]
+    public void Everything_that_comes_off_with_no_room_is_named()
+    {
+        var (s, inv) = Open();
+        EmptyBag(inv);
+        var shield = TestGear(s, inv, "Board Shield", 0, 0);
+        inv.Move(shield, ItemPlace.Worn(GearRules.LeftHand, 0)); // takes the Voulge off into the bag
+        for (var i = 0; i < 60 && inv.FirstFit(1, 1) is not null; i++)
+            inv.Duplicate(Index(inv, "Fang Pendant"));
+
+        var result = inv.Move(Index(inv, "Board Shield"), ItemPlace.Worn(GearRules.LeftHand, 1));
+
+        Assert.Equal(["Guard Crossbow", "o_inv_leafshaped_bolts"], result.Removed.Order());
+        Assert.Equal(ItemPlace.Worn(GearRules.LeftHand, 1), Item(inv, "Board Shield").Place);
     }
 
     [Fact]
@@ -269,7 +318,7 @@ public class InventoryMoveTests
         var (_, inv) = Open();
         var bolts = Index(inv, "o_inv_leafshaped_bolts");
 
-        Assert.Equal("The other hand holds a two-handed weapon", inv.Refusal(bolts, ItemPlace.Worn(GearRules.LeftHand, 0)));
+        Assert.Equal("Ammunition goes with a bow, crossbow or sling in the other hand", inv.Refusal(bolts, ItemPlace.Worn(GearRules.LeftHand, 0)));
 
         var spot = inv.FirstFit(1, 1)!.Value;
         inv.Move(bolts, ItemPlace.InBag(spot.X, spot.Y));
@@ -380,15 +429,17 @@ public class InventoryMoveTests
     }
 
     [Fact]
-    public void Shields_can_go_beside_a_one_handed_weapon_only()
+    public void A_shield_beside_a_two_handed_weapon_takes_it_off()
     {
+        // The reverse of session H's bow and shield, assumed alike.
         var (s, inv) = Open();
         var spot = inv.FirstFit(1, 1)!.Value;
         var shield = TestGear(s, inv, "Board Shield", spot.X, spot.Y);
 
-        Assert.Equal("The other hand holds a two-handed weapon", inv.Refusal(shield, ItemPlace.Worn(GearRules.LeftHand, 0)));
-        ToBag(inv, "o_inv_leafshaped_bolts");
-        inv.Move(Index(inv, "Guard Crossbow"), ItemPlace.Worn(GearRules.RightHand, 0));
-        Assert.Equal("The other hand holds a two-handed weapon", inv.Refusal(shield, ItemPlace.Worn(GearRules.LeftHand, 0)));
+        inv.Move(shield, ItemPlace.Worn(GearRules.LeftHand, 1));
+
+        Assert.Equal(ItemPlace.Worn(GearRules.LeftHand, 1), Item(inv, "Board Shield").Place);
+        Assert.False(Item(inv, "Guard Crossbow").Equipped);
+        Assert.False(Item(inv, "o_inv_leafshaped_bolts").Equipped);
     }
 }

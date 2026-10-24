@@ -13,7 +13,7 @@ Plan: `2026-10-23-inventory-drag-and-drop.md`. Each ruling says what was decided
 - Task 5: the owner's G2 report gave the slots. Slings go in either hand, with stones, bullets or metal shot in the other; lutes, chains and pickaxes are two-handed; the sickle (a tool from the weapons table) and the torch go in either hand; other tools from the items table aren't worn; wands are still refused. Cost if wrong: one of those kinds is refused or allowed against the game.
 - Task 7: the removal test fills the bag with 1 × 1 copies (torches left room in the last two rows). Cost if wrong: none.
 - Final: the active set's left hand is written `f7` 2, as the game does for an off-hand weapon and for sling stones. Cost if wrong: none seen; G1's bolts with `true` loaded too.
-- Final: a move that would leave ammunition without its weapon is refused ("Take the ammunition off first"), not done with the ammunition taken off as well. Whether the game allows that state is unknown. Cost if wrong: one extra drag.
+- Final, superseded by session H: a move that would leave ammunition without its weapon was refused. The game takes the ammunition off with its weapon, so the editor now does that.
 - Final: a two-handed item dropped on either hand goes in that set's right hand (owner, for the lute, chain and pickaxe), applied to every two-handed kind. Cost if wrong: none for the reported kinds.
 - Moved repo: the owner moved the repo to `D:\Projects`. A shell test that checked "the save opened" before the click was handled failed under the full suite there; it now waits for it (test only).
 
@@ -28,3 +28,10 @@ Plan: `2026-10-23-inventory-drag-and-drop.md`. Each ruling says what was decided
 - Each slot's answer is worked out once when a drag starts, not on every frame.
 - Tests added: a drag ending over nothing leaves nothing behind; a real autosave storing weapon sets as `true`/`false`.
 - Not checkable without the game, so session H (`Lab make-session-h`, `character_8`) asks the owner: a fresh arrow stack equipped by the editor (`f4` 0, worn bolts show 5), a shield in a hand, and whether arrows stay in the off-hand once the bow comes off (if so, the editor can stop refusing that).
+
+## Session H (2026-10-24, branch `feature/inventory-make-room`)
+
+- Ruling: the editor makes room as the game does instead of refusing. Ammunition comes off when its weapon leaves the hand (seen); a two-handed item takes the other hand off (seen with a bow and a shield); an item put beside a two-handed one takes that off (assumed alike, not seen). Cost if wrong: the reverse direction differs from the game, but either way the result is a valid arrangement.
+- Ruling: the ammunition comes off whenever the weapon in its set's right hand leaves, even when another weapon that shoots it takes its place, as the game took the arrows off as soon as the bow was dragged. Cost if wrong: one extra drag to put the ammunition back.
+- Ruling: several items can come off in one move, so the move result lists every item removed for lack of room, and the banner names them all. Cost if wrong: none.
+
