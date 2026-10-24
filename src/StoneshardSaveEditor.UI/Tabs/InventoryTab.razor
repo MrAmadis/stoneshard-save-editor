@@ -55,6 +55,24 @@
                     }
                 </button>
             }
+            @if (_drag is { } drag)
+            {
+                @for (var y = 0; y < Session.BagRows; y++)
+                {
+                    for (var x = 0; x < InventoryEditor.Columns; x++)
+                    {
+                        var (cx, cy) = (x, y);
+                        <div class="cell" data-x="@cx" data-y="@cy" style="left:@(cx * Cell)px;top:@(cy * Cell)px"
+                             @ondragenter="() => _hover = (cx, cy)" @ondragover:preventDefault="true" @ondrop="() => DropInBag(cx, cy)"></div>
+                    }
+                }
+                @if (_hover is { } hover && Session.Items.ElementAtOrDefault(drag.Index) is { } dragged)
+                {
+                    var to = ItemPlace.InBag(hover.X - drag.GrabX, hover.Y - drag.GrabY);
+                    <div class="drop-outline @(EditorService.MoveRefusal(drag.Index, to) is null ? "fit" : "clash")"
+                         style="left:@(to.X * Cell)px;top:@(to.Y * Cell)px;width:@(dragged.W * Cell)px;height:@(dragged.H * Cell)px"></div>
+                }
+            }
         </div>
     </section>
 
@@ -166,6 +184,7 @@
     private sealed record Drag(int Index, int GrabX, int GrabY);
 
     private Drag? _drag;
+    private (int X, int Y)? _hover;
     private string? _removed;
 
     /// <summary>Where an item is: its bag cell, or its equipment slot and weapon set. Unlike its list index, this stays
@@ -223,7 +242,18 @@
         _drag = new Drag(item.Index, grabX, grabY);
     }
 
-    private void EndDrag() => _drag = null;
+    private void EndDrag()
+    {
+        _drag = null;
+        _hover = null;
+    }
+
+    /// <summary>A drop on a backpack cell lands the item with the cell it was grabbed by under the pointer.</summary>
+    private void DropInBag(int x, int y)
+    {
+        if (_drag is { } drag)
+            MoveDragged(ItemPlace.InBag(x - drag.GrabX, y - drag.GrabY));
+    }
 
     private void DropOn(DollCell? cell)
     {
@@ -235,7 +265,7 @@
     private void MoveDragged(ItemPlace to)
     {
         var drag = _drag;
-        _drag = null;
+        EndDrag();
         if (drag is null || EditorService.MoveRefusal(drag.Index, to) is not null)
             return;
         Edit(() =>

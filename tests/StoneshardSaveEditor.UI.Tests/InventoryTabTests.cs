@@ -1,7 +1,9 @@
 using Bunit;
 using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.GameData;
+using Microsoft.AspNetCore.Components.Web;
 using StoneshardSaveEditor.UI.Screens;
+using StoneshardSaveEditor.UI.Services;
 
 namespace StoneshardSaveEditor.Tests;
 
@@ -252,4 +254,99 @@ public class InventoryTabTests
 
         Assert.Contains(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("Voulge had no room and was removed"));
     }
+
+    /// <summary>The first free spot of the given size, counting every bag item as taken.</summary>
+    private static (int X, int Y) FreeSpot(EditorServiceTests.Harness h, int w, int hgt)
+    {
+        var bag = h.Editor.Current.Items.Where(i => !i.Equipped && i.X is not null).ToList();
+        return Enumerable.Range(0, InventoryEditor.BagRows - hgt + 1)
+            .SelectMany(y => Enumerable.Range(0, InventoryEditor.Columns - w + 1).Select(x => (X: x, Y: y)))
+            .First(p => !bag.Any(b => p.X < b.X + b.W && b.X < p.X + w && p.Y < b.Y + b.H && b.Y < p.Y + hgt));
+    }
+
+    private static AngleSharp.Dom.IElement BagCell(IRenderedComponent<Editor> cut, int x, int y) =>
+        cut.Find($".bag .cell[data-x='{x}'][data-y='{y}']");
+
+    private static ItemView Purse(EditorServiceTests.Harness h) => h.Editor.Current.Items.First(i => i.Name == "o_inv_moneybag");
+
+    [Fact]
+    public void The_outline_shows_where_an_item_would_land()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        var torch = h.Editor.Current.Items.First(i => i.Name == "o_inv_torch");
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        var outline = cut.Find(".bag .drop-outline");
+        Assert.Contains("fit", outline.ClassList);
+        Assert.Contains($"left:{spot.X * 54}px;top:{spot.Y * 54}px;width:54px;height:108px", outline.GetAttribute("style"));
+
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).DragEnter();
+        Assert.Contains("clash", cut.Find(".bag .drop-outline").ClassList);
+    }
+
+    [Fact]
+    public void Dropping_in_the_backpack_moves_an_item_to_a_free_spot()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        BagCell(cut, spot.X, spot.Y).Drop();
+
+        Assert.Equal(spot, (Purse(h).X!.Value, Purse(h).Y!.Value));
+        Assert.Empty(cut.FindAll(".bag .cell, .bag .drop-outline"));
+    }
+
+    [Fact]
+    public void Dropping_on_a_taken_spot_leaves_the_item_where_it_was()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var before = (Purse(h).X, Purse(h).Y);
+        var torch = h.Editor.Current.Items.First(i => i.Name == "o_inv_torch");
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).DragEnter();
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).Drop();
+
+        Assert.Equal(before, (Purse(h).X, Purse(h).Y));
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void Unequipping_by_dropping_into_the_backpack()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+        var spot = FreeSpot(h, helmet.W, helmet.H);
+
+        cut.Find(".doll [data-cell='head'] .equipped").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        BagCell(cut, spot.X, spot.Y).Drop();
+
+        var moved = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+        Assert.Equal((false, spot.X, spot.Y), (moved.Equipped, moved.X!.Value, moved.Y!.Value));
+    }
+
+    [Fact]
+    public void Grabbing_an_item_by_its_lower_cell_keeps_that_offset()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 3);
+
+        cut.Find(".bag [data-item='o_inv_torch']").DragStart(new DragEventArgs { OffsetY = 1.5 * InventoryLayout.Cell });
+        BagCell(cut, spot.X, spot.Y + 1).DragEnter();
+
+        var outline = cut.Find(".bag .drop-outline");
+        Assert.Contains("fit", outline.ClassList);
+        Assert.Contains($"top:{spot.Y * 54}px", outline.GetAttribute("style"));
+    }
 }
+
