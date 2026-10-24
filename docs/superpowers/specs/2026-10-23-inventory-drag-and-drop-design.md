@@ -63,7 +63,7 @@ Today the tab only shows where things are. Items can be selected, edited, duplic
 
   Both hands come in two weapon sets (save field `weaponSet` 0 and 1, shown as "weapon" and "set 2").
 - A two-handed weapon can't go into a set whose other hand holds a shield or a weapon. Nothing can go into the left hand of a set holding a two-handed weapon. Both cases are refused (owner agreed). The exception is ammunition for a bow or crossbow: Velmir's save has a crossbow in the right hand of set 1 and its bolts in the left.
-- Not settled yet, to be confirmed in-game (§7): wands, slings, lutes, picks, chains, torches and loose ammunition.
+- Settled by session G (in-game findings): slings go in either hand with stones, bullets or metal shot in the other; lutes, chains and pickaxes take both hands and can be dropped on either; the torch and the sickle take one hand, either. Wands are still unknown and refused.
 
 ### 5.2 Unequipping
 
