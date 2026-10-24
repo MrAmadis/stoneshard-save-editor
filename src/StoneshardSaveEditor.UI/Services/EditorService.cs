@@ -197,6 +197,21 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView DeleteItem(int index) => Edit(s => Inventory(s).Delete(index));
 
+    /// <summary>Moves an item in the bag or on and off the character (spec §5); see <see cref="InventoryEditor.Move"/>.</summary>
+    public MoveResult MoveItem(int index, ItemPlace to)
+    {
+        MoveResult? result = null;
+        Edit(s => result = Inventory(s).Move(index, to));
+        return result!;
+    }
+
+    /// <summary>Why an item can't move there, or null when it can; asks without changing anything.</summary>
+    public string? MoveRefusal(int index, ItemPlace to)
+    {
+        lock (_lock)
+            return Inventory(Session).Refusal(index, to);
+    }
+
     public SessionView DuplicateItem(int index) => Edit(s =>
     {
         RequireGame();
