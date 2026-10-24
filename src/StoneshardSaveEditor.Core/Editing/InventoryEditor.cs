@@ -248,7 +248,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
                 ? new MovePlan(null, [(index, to)], null)
                 : MovePlan.Refused("There's no room there");
 
-        if (!GearRules.SlotsFor(shapes.Kind(item.Name)).Contains(to.Slot))
+        if (!GearRules.SlotsFor(shapes.Kind(item.Name), item.Name).Contains(to.Slot))
             return MovePlan.Refused("That doesn't go there");
 
         var worn = Read().Where(i => i.Equipped && i.Index != index).GroupBy(i => i.Place).ToDictionary(g => g.Key, g => g.First());
@@ -260,7 +260,7 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
             return new MovePlan(null, [(index, to)], null);
 
         // The item already there trades places if it can, else comes off into the bag.
-        if (!from.IsBag && GearRules.SlotsFor(shapes.Kind(occupant.Name)).Contains(from.Slot))
+        if (!from.IsBag && GearRules.SlotsFor(shapes.Kind(occupant.Name), occupant.Name).Contains(from.Slot))
         {
             worn[from] = occupant;
             if (HandRefusal(occupant, from, worn) is null)
