@@ -348,5 +348,69 @@ public class InventoryTabTests
         Assert.Contains("fit", outline.ClassList);
         Assert.Contains($"top:{spot.Y * 54}px", outline.GetAttribute("style"));
     }
+
+    [Fact]
+    public void The_removal_banner_goes_when_the_changes_are_undone()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var voulge = h.Editor.Current.Items.Single(i => i.Name == "Voulge");
+        var bow = h.Editor.Catalog().First(c => c.Category == "bow" && c.Availability == CatalogAvailability.Ready && c.W * c.H < voulge.W * voulge.H);
+        AddToBag(h, cut, bow.Key);
+        var small = h.Editor.Current.Items.First(i => !i.Equipped && i.W == 1 && i.H == 1).Index;
+        for (var i = 0; i < 50; i++)
+        {
+            try { h.Editor.DuplicateItem(small); }
+            catch (EditRejectedException) { break; }
+        }
+        cut.WaitForElement($".bag [data-item='{bow.Key}']").DragStart();
+        Target(cut, GearRules.RightHand).Drop();
+        Assert.Contains(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("had no room"));
+
+        h.Editor.Reload();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("had no room")));
+    }
+
+    [Fact]
+    public void Hovering_the_equipment_clears_the_backpack_outline()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        Assert.NotEmpty(cut.FindAll(".bag .drop-outline"));
+
+        Target(cut, GearRules.Head).DragEnter();
+
+        Assert.Empty(cut.FindAll(".bag .drop-outline"));
+    }
+
+    [Fact]
+    public void A_drag_that_ends_over_nothing_leaves_nothing_behind()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragEnd();
+
+        Assert.Empty(cut.FindAll(".bag .cell, .bag .drop-outline, .gear-slot.ok, .gear-slot.no, .dragging"));
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void The_dragged_items_old_spot_shows_while_dragging()
+    {
+        var (_, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+
+        Assert.Contains("dragging", cut.Find(".bag [data-item='o_inv_moneybag']").ClassList);
+    }
 }
 

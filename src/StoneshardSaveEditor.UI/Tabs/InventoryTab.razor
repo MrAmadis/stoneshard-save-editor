@@ -44,7 +44,7 @@
         <div class="bag" style="width:@(InventoryEditor.Columns * Cell + 2)px;height:@(Session.BagRows * Cell + 2)px">
             @foreach (var item in Session.Items.Where(i => !i.Equipped && i.X is not null))
             {
-                <button class="it @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name" title="@EditorService.ItemName(item.Name)"
+                <button class="it @(IsSelected(item) ? "sel" : "") @(_drag?.Index == item.Index ? "dragging" : "")" data-index="@item.Index" data-item="@item.Name" title="@EditorService.ItemName(item.Name)"
                         style="left:@(item.X * Cell)px;top:@(item.Y * Cell)px;width:@(item.W * Cell)px;height:@(item.H * Cell)px"
                         draggable="true" @ondragstart="e => StartDrag(item, e)" @ondragend="EndDrag"
                         @onclick="() => Select(item)">
@@ -186,6 +186,18 @@
     private Drag? _drag;
     private (int X, int Y)? _hover;
     private string? _removed;
+    private int _changes;
+
+    /// <summary>Whether the dragged item may go in each slot, worked out once when the drag starts.</summary>
+    private Dictionary<DollCell, bool>? _fits;
+
+    /// <summary>The removal notice belongs to the edit that made it: undoing or reloading drops it.</summary>
+    protected override void OnParametersSet()
+    {
+        if (Session.ChangeCount < _changes)
+            _removed = null;
+        _changes = Session.ChangeCount;
+    }
 
     /// <summary>Where an item is: its bag cell, or its equipment slot and weapon set. Unlike its list index, this stays
     /// the same when other items are added or deleted.</summary>
@@ -207,12 +219,12 @@
     private RenderFragment GearSlot(DollCell? cell, List<ItemView> items) =>
         @<div class="gear-slot @(cell?.Tall == true ? "tall" : "") @DropClass(cell)" data-cell="@(cell?.Id ?? "other")"
               data-slot="@cell?.Slot" data-set="@cell?.Set"
-              @ondragover:preventDefault="true" @ondrop="() => DropOn(cell)">
+              @ondragenter="() => _hover = null" @ondragover:preventDefault="true" @ondrop="() => DropOn(cell)">
             <span class="lbl">@(cell?.Label ?? "other")</span>
             @foreach (var item in items)
             {
                 var (w, h) = InventoryLayout.Fit(item.W, item.H, BoxWidth(cell) / items.Count, cell?.Tall == true ? 156 : 100);
-                <button class="equipped @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name"
+                <button class="equipped @(IsSelected(item) ? "sel" : "") @(_drag?.Index == item.Index ? "dragging" : "")" data-index="@item.Index" data-item="@item.Name"
                         title="@EditorService.ItemName(item.Name)" draggable="true" @ondragstart="() => StartDrag(item, null)" @ondragend="EndDrag"
                         @onclick="() => Select(item)">
                     <Icon Sprite="@item.Sprite" Width="w" Height="h" Alt="@EditorService.ItemName(item.Name)" />
@@ -233,19 +245,21 @@
 
     /// <summary>While dragging, whether the item may go in this slot: lit (<c>ok</c>) or faded (<c>no</c>).</summary>
     private string DropClass(DollCell? cell) =>
-        _drag is null || cell is null ? "" : EditorService.MoveRefusal(_drag.Index, cell.Place) is null ? "ok" : "no";
+        _fits is null || cell is null ? "" : _fits[cell] ? "ok" : "no";
 
     private void StartDrag(ItemView item, DragEventArgs? e)
     {
         var grabX = e is null ? 0 : Math.Clamp((int)(e.OffsetX / Cell), 0, item.W - 1);
         var grabY = e is null ? 0 : Math.Clamp((int)(e.OffsetY / Cell), 0, item.H - 1);
         _drag = new Drag(item.Index, grabX, grabY);
+        _fits = Doll.SelectMany(b => b).ToDictionary(c => c, c => EditorService.MoveRefusal(item.Index, c.Place) is null);
     }
 
     private void EndDrag()
     {
         _drag = null;
         _hover = null;
+        _fits = null;
     }
 
     /// <summary>A drop on a backpack cell lands the item with the cell it was grabbed by under the pointer.</summary>

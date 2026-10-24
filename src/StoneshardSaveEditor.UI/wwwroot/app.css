@@ -209,6 +209,7 @@ img.px, img.preview { image-rendering: pixelated; }
     text-shadow: 0 0 3px #000, 0 0 3px #000;
     pointer-events: none;
 }
+.bag .it.dragging, .equipped.dragging { opacity: .35; outline: 2px dashed var(--accent); }
 .bag .cell { position: absolute; width: var(--cell); height: var(--cell); z-index: 2; }
 .bag .drop-outline { position: absolute; z-index: 3; pointer-events: none; border-radius: 3px; }
 .drop-outline.fit { outline: 2px solid var(--ok); background: rgba(127, 191, 90, .2); }
