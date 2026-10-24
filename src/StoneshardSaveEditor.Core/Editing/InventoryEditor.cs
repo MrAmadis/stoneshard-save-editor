@@ -120,9 +120,11 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
     public bool WouldMove(int index, ItemPlace to) => PlanMove(index, to) is { Refusal: null, Steps.Count: > 0 };
 
     /// <summary>
-    /// Moves an item within the bag, onto an equipment slot or off it. An item already in the target slot trades places
-    /// when it fits the mover's place, otherwise comes off into the bag: the spot the mover left, else the first free
-    /// one, else it is removed. Only the placement fields change; the item's own data stays.
+    /// Moves an item within the bag, onto an equipment slot or off it, making room as the game does (session H). An item
+    /// already in the target slot trades places when it fits the mover's place, otherwise comes off. A two-handed item
+    /// takes the other hand off, and an item beside a two-handed one takes that off; ammunition comes off as soon as its
+    /// weapon leaves the hand. What comes off goes into the bag (the first one tries the spot the mover left), and what
+    /// finds no room is removed and named. Only the placement fields change; the items' own data stays.
     /// </summary>
     public MoveResult Move(int index, ItemPlace to)
     {
@@ -130,21 +132,18 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         if (plan.Refusal is { } why)
             throw new EditRejectedException(why);
         if (plan.Steps.Count == 0)
-            return new MoveResult(index, null);
+            return new MoveResult(index, []);
 
         var mover = EntryAt(index);
         var active = ActiveSet();
         var moves = plan.Steps.Select(s => (Entry: EntryAt(s.Index), s.To)).ToList();
         foreach (var (entry, place) in moves)
             Relocate(entry, place, active);
-        string? removed = null;
-        if (plan.Remove is { } gone)
-        {
-            removed = NameOf(EntryAt(gone));
-            List.Items.RemoveAt(gone);
-        }
+        var gone = plan.Remove.Select(EntryAt).ToList();
+        foreach (var entry in gone)
+            List.Items.Remove(entry);
         session.MarkChanged();
-        return new MoveResult(List.Items.IndexOf(mover), removed);
+        return new MoveResult(List.Items.IndexOf(mover), gone.Select(NameOf).ToList());
     }
 
     public void Delete(int index)
@@ -235,10 +234,14 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         session.MarkChanged();
     }
 
-    private sealed record MovePlan(string? Refusal, IReadOnlyList<(int Index, ItemPlace To)> Steps, int? Remove)
+    private sealed record MovePlan(string? Refusal, IReadOnlyList<(int Index, ItemPlace To)> Steps, IReadOnlyList<int> Remove)
     {
-        public static MovePlan Refused(string why) => new(why, [], null);
+        public static readonly MovePlan Nothing = new(null, [], []);
+
+        public static MovePlan Refused(string why) => new(why, [], []);
     }
+
+    private static readonly int[] WeaponSets = [0, 1];
 
     private MovePlan PlanMove(int index, ItemPlace to)
     {
@@ -252,57 +255,101 @@ public sealed class InventoryEditor(SaveSession session, IItemShapeProvider shap
         if (!to.IsBag && IsHand(to.Slot) && to.WeaponSet is not (0 or 1))
             return MovePlan.Refused("That doesn't go there");
         if (from == to)
-            return new MovePlan(null, [], null);
+            return MovePlan.Nothing;
 
-        var worn = Read().Where(i => i.Equipped && i.Index != index).GroupBy(i => i.Place).ToDictionary(g => g.Key, g => g.First());
+        var all = Read();
+        var worn = all.Where(i => i.Equipped && i.Index != index).GroupBy(i => i.Place).ToDictionary(g => g.Key, g => g.First());
+        var rightBefore = WeaponSets.ToDictionary(set => set, set => all.FirstOrDefault(i => i.Equipped && i.Place == RightOf(set))?.Index);
+        var steps = new List<(int Index, ItemPlace To)> { (index, to) };
+        var off = new List<ItemView>();
+        void TakeOff(ItemPlace place)
+        {
+            if (worn.Remove(place, out var gone))
+                off.Add(gone);
+        }
+        // Ammunition comes off as soon as its weapon leaves the hand (session H), unless it is what is moving.
+        void AmmoOff(int set)
+        {
+            if (worn.GetValueOrDefault(LeftOf(set)) is { } left && left.Index != index && shapes.Kind(left.Name) == "ammo")
+                TakeOff(LeftOf(set));
+        }
+        if (from.Slot == GearRules.RightHand)
+            AmmoOff(from.WeaponSet);
+
         if (to.IsBag)
-            return !Grid(except: index).Fits(to.X, to.Y, item.W, item.H)
-                ? MovePlan.Refused("There's no room there")
-                : Checked(new MovePlan(null, [(index, to)], null), worn, from, to);
-
-        if (!GearRules.SlotsFor(kind, item.Name).Contains(to.Slot))
-            return MovePlan.Refused("That doesn't go there");
-
-        var occupant = worn.GetValueOrDefault(to);
-        worn[to] = item;
-        if (HandRefusal(item, to, worn) is { } why)
-            return MovePlan.Refused(why);
-        if (occupant is null)
-            return Checked(new MovePlan(null, [(index, to)], null), worn, from, to);
-
-        // The item already there trades places if it can, else comes off into the bag.
-        if (!from.IsBag && GearRules.SlotsFor(shapes.Kind(occupant.Name), occupant.Name).Contains(from.Slot))
         {
-            worn[from] = occupant;
-            if (HandRefusal(occupant, from, worn) is null)
-                return Checked(new MovePlan(null, [(index, to), (occupant.Index, from)], null), worn, from, to);
-            worn.Remove(from);
+            if (!Grid(except: index).Fits(to.X, to.Y, item.W, item.H))
+                return MovePlan.Refused("There's no room there");
         }
+        else
+        {
+            if (!GearRules.SlotsFor(kind, item.Name).Contains(to.Slot))
+                return MovePlan.Refused("That doesn't go there");
+            if (kind == "ammo" && !(worn.GetValueOrDefault(RightOf(to.WeaponSet)) is { } shooter && GearRules.Shoots(shapes.Kind(shooter.Name), item.Name)))
+                return MovePlan.Refused("Ammunition goes with a bow, crossbow or sling in the other hand");
+
+            var occupant = worn.GetValueOrDefault(to);
+            worn[to] = item;
+            if (occupant is not null)
+            {
+                // The item already there trades places if it fits the mover's, else comes off.
+                if (!from.IsBag && !worn.ContainsKey(from) && GearRules.SlotsFor(shapes.Kind(occupant.Name), occupant.Name).Contains(from.Slot))
+                {
+                    worn[from] = occupant;
+                    if (HandRefusal(occupant, from, worn) is null)
+                        steps.Add((occupant.Index, from));
+                    else
+                    {
+                        worn.Remove(from);
+                        off.Add(occupant);
+                    }
+                }
+                else
+                    off.Add(occupant);
+            }
+
+            // A two-handed item takes the other hand off; an item beside a two-handed one takes that off (session H).
+            if (IsHand(to.Slot))
+            {
+                var otherPlace = to.Slot == GearRules.RightHand ? LeftOf(to.WeaponSet) : RightOf(to.WeaponSet);
+                if (worn.GetValueOrDefault(otherPlace) is { } other)
+                {
+                    var otherKind = shapes.Kind(other.Name);
+                    var clash = to.Slot == GearRules.RightHand
+                        ? GearRules.IsTwoHanded(kind) && !(otherKind == "ammo" && GearRules.Shoots(kind, other.Name))
+                        : GearRules.IsTwoHanded(otherKind) && !(kind == "ammo" && GearRules.Shoots(otherKind, item.Name));
+                    if (clash)
+                        TakeOff(otherPlace);
+                }
+            }
+        }
+        foreach (var set in WeaponSets)
+            if (rightBefore[set] is { } was && worn.GetValueOrDefault(RightOf(set))?.Index != was)
+                AmmoOff(set);
+
+        // What comes off goes into the bag; the first item tries the spot the mover left.
         var grid = Grid(except: index);
-        (int X, int Y)? spot = from.IsBag && grid.Fits(from.X, from.Y, occupant.W, occupant.H)
-            ? (from.X, from.Y)
-            : grid.FirstFit(occupant.W, occupant.H);
-        return Checked(spot is { } s
-            ? new MovePlan(null, [(index, to), (occupant.Index, ItemPlace.InBag(s.X, s.Y))], null)
-            : new MovePlan(null, [(index, to)], occupant.Index), worn, from, to);
+        if (to.IsBag)
+            grid.Occupy(to.X, to.Y, item.W, item.H);
+        var remove = new List<int>();
+        for (var k = 0; k < off.Count; k++)
+        {
+            var o = off[k];
+            (int X, int Y)? spot = k == 0 && from.IsBag && grid.Fits(from.X, from.Y, o.W, o.H) ? (from.X, from.Y) : grid.FirstFit(o.W, o.H);
+            if (spot is { } s)
+            {
+                grid.Occupy(s.X, s.Y, o.W, o.H);
+                steps.Add((o.Index, ItemPlace.InBag(s.X, s.Y)));
+            }
+            else
+                remove.Add(o.Index);
+        }
+        return new MovePlan(null, steps, remove);
     }
 
-    /// <summary>
-    /// Refuses a plan that would leave ammunition in a weapon set the move touched without the weapon that shoots it;
-    /// <paramref name="worn"/> is the gear as the plan leaves it.
-    /// </summary>
-    private MovePlan Checked(MovePlan plan, Dictionary<ItemPlace, ItemView> worn, ItemPlace from, ItemPlace to)
-    {
-        foreach (var set in new[] { from, to }.Where(p => IsHand(p.Slot)).Select(p => p.WeaponSet).Distinct())
-        {
-            if (worn.GetValueOrDefault(ItemPlace.Worn(GearRules.LeftHand, set)) is not { } left || shapes.Kind(left.Name) != "ammo")
-                continue;
-            var right = worn.GetValueOrDefault(ItemPlace.Worn(GearRules.RightHand, set));
-            if (right is null || !GearRules.Shoots(shapes.Kind(right.Name), left.Name))
-                return MovePlan.Refused("Take the ammunition off first");
-        }
-        return plan;
-    }
+    private static ItemPlace RightOf(int set) => ItemPlace.Worn(GearRules.RightHand, set);
+
+    private static ItemPlace LeftOf(int set) => ItemPlace.Worn(GearRules.LeftHand, set);
 
     /// <summary>Why <paramref name="item"/> can't be held at <paramref name="at"/> next to the set's other hand, or null.</summary>
     private string? HandRefusal(ItemView item, ItemPlace at, Dictionary<ItemPlace, ItemView> worn)
