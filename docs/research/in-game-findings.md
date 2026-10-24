@@ -112,5 +112,6 @@ The game marks an item in the active weapon set's left hand with `f7` 2: Jorgrim
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
-- Session G follow-ups: a bow with arrows; a shield in a hand; whether the game lets ammunition stay in a hand after its weapon comes off (the editor refuses that for now); a wand (the editor can't make one yet).
+- Session H (`character_8`, built 2026-10-24): a bow with a fresh arrow stack equipped by the editor (`f4` 0); a sword and a shield; whether the arrows stay in the off-hand once the bow comes off (the editor refuses that for now).
+- A wand (the editor can't make one yet).
 - That the game keeps a test character's `save_1` when it loads it (after session F `character_5/save_1` was untouched, but it isn't known which save was loaded).

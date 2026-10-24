@@ -17,14 +17,14 @@ Plan: `2026-10-23-inventory-drag-and-drop.md`. Each ruling says what was decided
 - Final: a two-handed item dropped on either hand goes in that set's right hand (owner, for the lute, chain and pickaxe), applied to every two-handed kind. Cost if wrong: none for the reported kinds.
 - Moved repo: the owner moved the repo to `D:\Projects`. A shell test that checked "the save opened" before the click was handled failed under the full suite there; it now waits for it (test only).
 
-## Deferred minor findings (final review)
+## Minor findings from the final review, fixed (2026-10-24, owner: "fix everything that is left")
 
-- An item worn in a non-hand slot with weapon set 1 (never seen in a save) would show under "other", and a drop on its slot would not replace it.
-- The "had no room and was removed" banner stays after Undo all or Reload, until the next move.
-- The landing outline stays in the bag while the pointer is over the equipment slots.
-- Dropping an item on its own place still runs a full edit; in a read-only save the slots light up although no drop can succeed.
-- Each render during a drag recomputes every slot's answer (up to about 18 ms with charged items); the slot answers could be worked out once when the drag starts.
-- Tests: no UI test for a drag ending after hovering the bag; no test opens a real autosave with `weaponSet` `false`.
-- Core accepts weapon sets other than 0 and 1 (the UI never sends them).
-- The mockup's dashed outline on the dragged item's old spot isn't drawn.
-- Not checked in-game: ammunition equipped from a fresh stack keeps `f4` 0 (worn bolts show 5), and a shield in a hand.
+- A gear item saved with weapon set 1 outside the hands now counts as its own slot.
+- Core refuses weapon sets other than the two the game has.
+- A drop where the item already is does no edit at all; a read-only save offers no moves, so nothing lights up.
+- The removal banner goes when changes are undone or the save reloads.
+- Hovering the equipment clears the backpack's landing outline.
+- The dragged item's old spot shows dashed while dragging, as in the mockup.
+- Each slot's answer is worked out once when a drag starts, not on every frame.
+- Tests added: a drag ending over nothing leaves nothing behind; a real autosave storing weapon sets as `true`/`false`.
+- Not checkable without the game, so session H (`Lab make-session-h`, `character_8`) asks the owner: a fresh arrow stack equipped by the editor (`f4` 0, worn bolts show 5), a shield in a hand, and whether arrows stay in the off-hand once the bow comes off (if so, the editor can stop refusing that).
