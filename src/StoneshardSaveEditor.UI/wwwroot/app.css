@@ -17,6 +17,8 @@
     --danger: #5a2620;
     --danger-border: #a5463b;
     --durability: #7fb04f;
+    --ok: #7fbf5a;
+    --clash: #d0533f;
     --available: #7a8f5a;
     --link: #6f6296;
     --cell: 54px;
@@ -187,6 +189,10 @@ img.px, img.preview { image-rendering: pixelated; }
     justify-content: center;
 }
 .gear-slot.tall { height: 164px; }
+.gear-box { display: flex; gap: 4px; min-width: 0; }
+.gear-box > .gear-slot { flex: 1; min-width: 0; }
+.gear-slot.ok { border: 2px solid var(--ok); box-shadow: 0 0 8px var(--ok); }
+.gear-slot.no { opacity: .35; }
 .gear-slot .lbl { position: absolute; top: 2px; left: 4px; font: 10px system-ui, sans-serif; color: #8c7a5c; }
 .equipped, .bag .it { position: relative; padding: 0; background: none; border: 0; cursor: pointer; color: inherit; }
 .equipped { display: flex; align-items: center; justify-content: center; }
@@ -203,6 +209,11 @@ img.px, img.preview { image-rendering: pixelated; }
     text-shadow: 0 0 3px #000, 0 0 3px #000;
     pointer-events: none;
 }
+.bag .it.dragging, .equipped.dragging { opacity: .35; outline: 2px dashed var(--accent); }
+.bag .cell { position: absolute; width: var(--cell); height: var(--cell); z-index: 2; }
+.bag .drop-outline { position: absolute; z-index: 3; pointer-events: none; border-radius: 3px; }
+.drop-outline.fit { outline: 2px solid var(--ok); background: rgba(127, 191, 90, .2); }
+.drop-outline.clash { outline: 2px solid var(--clash); background: rgba(208, 83, 63, .2); }
 .dur { position: absolute; left: 3px; right: 3px; bottom: -6px; height: 3px; background: #3b1d1a; }
 .dur i { display: block; height: 100%; background: var(--durability); }
 .bag {

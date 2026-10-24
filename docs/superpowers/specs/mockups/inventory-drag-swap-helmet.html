@@ -1,0 +1,94 @@
+<style>
+  .inv { display:flex; gap:18px; background:#1d1913; padding:14px; border-radius:8px; color:#d9cbb0; font:13px Georgia, serif; }
+  .doll { display:grid; grid-template-columns:repeat(3, 64px); gap:6px; }
+  .slot { height:58px; border:1px solid #4a3f30; border-radius:4px; background:#262017; position:relative; display:flex; align-items:center; justify-content:center; }
+  .slot.tall { height:96px; }
+  .slot .lbl { position:absolute; top:2px; left:4px; font-size:10px; color:#8a7b62; }
+  .slot.ok { border:2px solid #7fbf5a; box-shadow:0 0 8px #7fbf5a88; }
+  .slot.no { opacity:.35; }
+  .empty { visibility:hidden; }
+  .bag { display:grid; grid-template-columns:repeat(10, 30px); grid-template-rows:repeat(5, 30px); gap:0; border:1px solid #4a3f30; background:#211c14; position:relative; width:300px; height:150px; }
+  .it { position:absolute; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#1d1913; font-weight:bold; }
+  .helm-old { background:#9aa3ad; }
+  .helm-new { background:#d6b45a; }
+  .sword { background:#b9c4cf; }
+  .potion { background:#b0553f; }
+  .ghost { opacity:.35; outline:2px dashed #d6b45a; background:none; color:#d6b45a; }
+  .drag { position:absolute; opacity:.85; transform:rotate(-4deg); box-shadow:0 4px 12px #000a; }
+  .cap { color:#8a7b62; font-size:12px; margin:6px 0 0; }
+  h4 { margin:0 0 6px; color:#e8d9b8; font-weight:normal; }
+</style>
+
+<h2>Swapping a helmet by dragging</h2>
+<p class="subtitle">My guess at how it looks. Left: while you drag. Right: after you drop it on the head slot.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">While dragging the new helmet</div>
+    <div class="mockup-body">
+      <div class="inv">
+        <div>
+          <h4>Equipped</h4>
+          <div class="doll">
+            <div class="slot no"><span class="lbl">neck</span></div>
+            <div class="slot ok"><span class="lbl">head</span><div class="it helm-old" style="position:static;width:40px;height:40px">old</div></div>
+            <div class="slot no"><span class="lbl">back</span></div>
+            <div class="slot tall no"><span class="lbl">weapon</span></div>
+            <div class="slot tall no"><span class="lbl">body</span></div>
+            <div class="slot tall no"><span class="lbl">set 2</span></div>
+            <div class="slot no"><span class="lbl">hands</span></div>
+            <div class="slot no"><span class="lbl">belt</span></div>
+            <div class="slot no"><span class="lbl">rings</span></div>
+            <div class="slot empty"></div>
+            <div class="slot no"><span class="lbl">feet</span></div>
+            <div class="slot empty"></div>
+          </div>
+        </div>
+        <div style="position:relative">
+          <h4>Backpack</h4>
+          <div class="bag">
+            <div class="it sword" style="left:0;top:0;width:30px;height:90px">sword</div>
+            <div class="it ghost" style="left:60px;top:0;width:60px;height:60px">new</div>
+            <div class="it potion" style="left:150px;top:30px;width:30px;height:30px">pot</div>
+          </div>
+          <div class="it helm-new drag" style="left:-190px;top:6px;width:60px;height:60px">new</div>
+        </div>
+      </div>
+      <p class="cap">The head slot lights up; slots the helmet can't go in fade out. Its old spot in the backpack shows as an outline.</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">After dropping it on the head slot</div>
+    <div class="mockup-body">
+      <div class="inv">
+        <div>
+          <h4>Equipped</h4>
+          <div class="doll">
+            <div class="slot"><span class="lbl">neck</span></div>
+            <div class="slot"><span class="lbl">head</span><div class="it helm-new" style="position:static;width:40px;height:40px">new</div></div>
+            <div class="slot"><span class="lbl">back</span></div>
+            <div class="slot tall"><span class="lbl">weapon</span></div>
+            <div class="slot tall"><span class="lbl">body</span></div>
+            <div class="slot tall"><span class="lbl">set 2</span></div>
+            <div class="slot"><span class="lbl">hands</span></div>
+            <div class="slot"><span class="lbl">belt</span></div>
+            <div class="slot"><span class="lbl">rings</span></div>
+            <div class="slot empty"></div>
+            <div class="slot"><span class="lbl">feet</span></div>
+            <div class="slot empty"></div>
+          </div>
+        </div>
+        <div>
+          <h4>Backpack</h4>
+          <div class="bag">
+            <div class="it sword" style="left:0;top:0;width:30px;height:90px">sword</div>
+            <div class="it helm-old" style="left:60px;top:0;width:60px;height:60px">old</div>
+            <div class="it potion" style="left:150px;top:30px;width:30px;height:30px">pot</div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">The old helmet takes the spot the new one left (my guess). If it doesn't fit there, it goes to the first free spot; if there's no room at all, it's removed.</p>
+    </div>
+  </div>
+</div>

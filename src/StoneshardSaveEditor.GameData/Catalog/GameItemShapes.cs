@@ -8,7 +8,7 @@ namespace StoneshardSaveEditor.GameData;
 /// generated gear uses <c>s_inv_</c> + its name in lowercase letters and digits ("Guard Crossbow" → s_inv_guardcrossbow).
 /// Stack limits come from the items table's <c>stack</c> column.
 /// </summary>
-public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects, GameTable items) : IItemShapeProvider
+public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects, ExeTables tables) : IItemShapeProvider
 {
     public const string Missing = "missing";
     private const int CellPixels = 27;
@@ -31,10 +31,16 @@ public sealed class GameItemShapes(SpriteTable sprites, ObjectTable objects, Gam
 
     public int MaxStack(string itemName) =>
         itemName.StartsWith(ObjectPrefix, StringComparison.Ordinal)
-        && items.Find(itemName[ObjectPrefix.Length..]) is { } row
+        && tables.ItemsStats.Find(itemName[ObjectPrefix.Length..]) is { } row
         && int.TryParse(row["stack"], NumberStyles.None, CultureInfo.InvariantCulture, out var max)
             ? max
             : 0;
+
+    public string Kind(string itemName) =>
+        (itemName.StartsWith(ObjectPrefix, StringComparison.Ordinal)
+            ? tables.ItemsStats.Find(itemName[ObjectPrefix.Length..])?["Cat"]
+            : tables.Weapons.Find(itemName)?["Slot"] ?? tables.Armor.Find(itemName)?["Slot"])
+        ?? "";
 
     public static string GearSprite(string gearName) =>
         "s_inv_" + new string(gearName.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());

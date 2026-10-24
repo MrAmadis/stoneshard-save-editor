@@ -6,29 +6,6 @@ namespace StoneshardSaveEditor.Tests.Editing;
 
 public class InventoryEditorTests
 {
-    /// <summary>Velmir's real footprints (icon size / 27 px), so tests don't need the game install.</summary>
-    private sealed class FakeShapes : IItemShapeProvider
-    {
-        private static readonly Dictionary<string, (int, int)> Sizes = new()
-        {
-            ["o_inv_torch"] = (1, 3), ["o_inv_tinker"] = (1, 3),
-            ["o_inv_wineskin"] = (1, 2), ["o_inv_moneybag"] = (1, 2), ["o_inv_mead"] = (1, 2),
-            ["o_inv_potion04_empty"] = (1, 2), ["o_inv_brandy"] = (1, 2), ["o_inv_aqua_vitae"] = (1, 2),
-            ["o_inv_splint"] = (2, 1),
-        };
-
-        public (int W, int H) Footprint(string itemName) => Sizes.GetValueOrDefault(itemName, (1, 1));
-
-        public string SpriteFor(string itemName) => "s_" + itemName;
-
-        public int MaxStack(string itemName) => itemName switch
-        {
-            "o_inv_leafshaped_bolts" => 20,
-            "o_inv_gold" => 100,
-            _ => 0,
-        };
-    }
-
     private static (SaveSession Session, InventoryEditor Inv) Open()
     {
         var session = Sessions.OpenVelmir();

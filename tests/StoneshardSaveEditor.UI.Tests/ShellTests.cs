@@ -81,7 +81,8 @@ public class ShellTests
 
         cut.WaitForElement("[data-slot='character_2/exitsave_1']", GameFilesLoad).Click();
 
-        Assert.True(h.Editor.IsOpen);
+        // The click can be handled after Click() returns while the picker is still busy (seen under a full test run).
+        cut.WaitForAssertion(() => Assert.True(h.Editor.IsOpen), GameFilesLoad);
         Assert.Contains("Save to game", cut.Markup);
         Assert.Contains("Caravan Camp", cut.Find(".editor-header").TextContent);
 

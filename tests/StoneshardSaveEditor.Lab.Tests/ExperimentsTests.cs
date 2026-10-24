@@ -113,6 +113,119 @@ public class ExperimentsTests
         Assert.All(Purses(Load(root, made[1].Folder)), p => Assert.Equal(p.Coins, p.Cached));
     }
 
+    private static GmArray Named(GmObject save, string name) =>
+        ((GmArray)save["inventoryDataList"]!).Items.Cast<GmArray>().Single(e => ((GmString)e.Items[0]).Value == name);
+
+    private static string SlotOf(GmArray entry) => ((GmString)entry.Items[9]).Value;
+
+    private static double Field(GmArray entry, int field) => ((GmNumber)entry.Items[field]).Value;
+
+    [Fact]
+    public void Session_G_builds_the_moved_gear_characters()
+    {
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal(new[] { "Osbrook", "Mannshire" }, made.Select(m => m.Label));
+        var g1 = Load(root, made[0].Folder);
+        var hood = Named(g1, "Hood");
+        Assert.Equal("o_inv_head", SlotOf(hood));
+        Assert.Equal(-4, Field(hood, 2));
+        Assert.True(hood.Items[7] is GmBool { Value: true });
+        Assert.Equal("N/A", SlotOf(Named(g1, "Flat Kettle Helmet")));
+        Assert.Equal("o_inv_ring_1", SlotOf(Named(g1, "Antique Copper Ring")));
+        Assert.Equal("o_inv_ring_2", SlotOf(Named(g1, "Velmir Ring")));
+        var crossbow = Named(g1, "Guard Crossbow");
+        Assert.Equal(("o_inv_right_hand", 0.0), (SlotOf(crossbow), Field(crossbow, 8)));
+        var bolts = Named(g1, "o_inv_leafshaped_bolts");
+        Assert.Equal(("o_inv_left_hand", 0.0, 19.0), (SlotOf(bolts), Field(bolts, 8), Field(bolts, 6)));
+        var voulge = Named(g1, "Voulge");
+        Assert.Equal(("o_inv_right_hand", 1.0, 0.0), (SlotOf(voulge), Field(voulge, 8), Field(voulge, 7)));
+
+        var g2 = Load(root, made[1].Folder);
+        Assert.All(new[] { "Makeshift Sling", "o_inv_ammo_bullet", "Lute", "Pickaxe", "Chain", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch" },
+            name => Assert.Equal("N/A", SlotOf(Named(g2, name))));
+    }
+
+    [Fact]
+    public void Session_H_builds_the_bow_and_shield_character()
+    {
+        // The checks left after session G: a fresh arrow stack equipped by the editor, a shield, and stranded ammunition.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+
+        var made = Experiments.BuildSessionH(root, Game.Value, backups, new FakeProbe(false)).Single();
+
+        var h1 = Load(root, made.Folder);
+        Assert.Equal(("o_inv_right_hand", 0.0), (SlotOf(Named(h1, "Peasant Bow")), Field(Named(h1, "Peasant Bow"), 8)));
+        var arrows = Named(h1, "o_inv_arrows");
+        Assert.Equal(("o_inv_left_hand", 0.0, 2.0), (SlotOf(arrows), Field(arrows, 8), Field(arrows, 7)));
+        Assert.Equal(("o_inv_right_hand", 1.0), (SlotOf(Named(h1, "Arna Sword")), Field(Named(h1, "Arna Sword"), 8)));
+        Assert.Equal(("o_inv_left_hand", 1.0), (SlotOf(Named(h1, "Board Shield")), Field(Named(h1, "Board Shield"), 8)));
+        Assert.All(new[] { "Voulge", "Guard Crossbow", "o_inv_leafshaped_bolts" }, n => Assert.Equal("N/A", SlotOf(Named(h1, n))));
+    }
+
+    [Fact]
+    public void Session_G_works_when_the_source_bag_is_full()
+    {
+        // The live Velmir carries more than the fixture; the first live run found no room to move the torch.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+        var slot = new SaveLocator(root).Scan().Single(c => c.Folder == "character_2").Slots.Single(s => s.SlotFolder == "exitsave_1");
+        var source = SaveSession.Open(slot);
+        var inv = new InventoryEditor(source, Game.Value.Shapes);
+        var torch = inv.Read().First(i => i.Name == "o_inv_torch").Index;
+        for (var i = 0; i < 50 && inv.FirstFit(1, 3) is not null; i++)
+            inv.Duplicate(torch);
+        Assert.Null(inv.FirstFit(1, 3));
+        Assert.Equal(SaveResult.Saved, source.Save(backups, new FakeProbe(false)));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        Assert.Equal("o_inv_head", SlotOf(Named(Load(root, made[0].Folder), "Hood")));
+    }
+
+    private static void RemoveEverywhere(GmNode node, string itemName)
+    {
+        switch (node)
+        {
+            case GmArray array:
+                array.Items.RemoveAll(n => n is GmArray { Items.Count: > 0 } e && e.Items[0] is GmString s && s.Value == itemName);
+                foreach (var child in array.Items)
+                    RemoveEverywhere(child, itemName);
+                break;
+            case GmObject obj:
+                foreach (var (_, child) in obj.Entries)
+                    RemoveEverywhere(child, itemName);
+                break;
+        }
+    }
+
+    [Fact]
+    public void Session_G_skips_what_the_save_cant_supply()
+    {
+        // The live Velmir has no sling bullet to copy, and the catalog can't build one from the tables.
+        _ = Fixtures.GameDir;
+        var root = Fixtures.CopyRealSavesToTemp();
+        var backups = new BackupService(Path.Combine(Path.GetDirectoryName(root)!, "backups"));
+        var slot = new SaveLocator(root).Scan().Single(c => c.Folder == "character_2").Slots.Single(s => s.SlotFolder == "exitsave_1");
+        var source = SaveSession.Open(slot);
+        source.Apply(() => RemoveEverywhere(source.Root, "o_inv_ammo_bullet"));
+        source.MarkChanged();
+        Assert.Equal(SaveResult.Saved, source.Save(backups, new FakeProbe(false)));
+
+        var made = Experiments.BuildSessionG(root, Game.Value, backups, new FakeProbe(false));
+
+        var g2 = Load(root, made[1].Folder);
+        Assert.Equal("N/A", SlotOf(Named(g2, "Makeshift Sling")));
+        Assert.DoesNotContain(((GmArray)g2["inventoryDataList"]!).Items.Cast<GmArray>(), e => ((GmString)e.Items[0]).Value == "o_inv_ammo_bullet");
+    }
+
     [Fact]
     public void Session_D_builds_the_rules_check_character()
     {

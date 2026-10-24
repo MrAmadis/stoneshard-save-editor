@@ -1,6 +1,7 @@
 using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.Core.Files;
 using StoneshardSaveEditor.Core.Json;
+using StoneshardSaveEditor.GameData;
 
 namespace StoneshardSaveEditor.Lab;
 
@@ -84,6 +85,99 @@ public static class Experiments
             "each skill becomes learnable (see the checklist)",
             s => EveryBookRead(s, game));
         return batch.Results;
+    }
+
+    /// <summary>
+    /// Test characters for in-game session G (inventory drag and drop, spec §7): does the game take gear the editor
+    /// moved, and where do the kinds still open (slings, lutes, picks, chains, tools) go? The catalog can't build wands yet.
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionG(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook",
+            "G1 (bag emptied but for a purse and a torch; gear moved by the editor: helmet off, Hood on, rings swapped, Voulge and crossbow swapped weapon sets with the bolts " +
+            "following, torch and purse moved): check the gear shows where listed, armor and stats in the character screen match " +
+            "the worn gear, both weapon sets work, and nothing doubled or disappeared",
+            s => MovedGear(s, game));
+        batch.Make("Mannshire",
+            "G2 (sling, bullets if the save has some to copy, lute, pickaxe, chain, sickle, bow and arrows, torch in the bag): equip each item in the game and " +
+            "note which slot it goes to; does the sling take the bullets as the crossbow takes bolts?",
+            s => FillBagWith(s, game, Suppliable(s, game, OpenKinds)));
+        return batch.Results;
+    }
+
+    /// <summary>Biggest first, so first-fit packs all nine into the 10 × 5 bag.</summary>
+    private static readonly string[] OpenKinds =
+        ["Lute", "Pickaxe", "Chain", "Makeshift Sling", "Sickle", "Peasant Bow", "o_inv_arrows", "o_inv_torch", "o_inv_ammo_bullet"];
+
+    /// <summary>
+    /// Test character for in-game session H, the checks left after session G: a fresh arrow stack equipped by the editor
+    /// (worn bolts show <c>f4</c> 5, a new stack 0), a shield in a hand, and whether ammunition stays in a hand once its
+    /// weapon comes off (the editor refuses that for now).
+    /// </summary>
+    public static IReadOnlyList<ExperimentResult> BuildSessionH(string root, GameServices game, BackupService backups, IGameProcessProbe probe)
+    {
+        var batch = Batch.Start(root, backups, probe);
+        batch.Make("Osbrook",
+            "H1 (bag emptied but for the purse; a bow with a fresh stack of arrows put on by the editor in weapon set 1, a sword and " +
+            "a shield in set 2): shoot a few arrows; switch to set 2 and block with the shield; then take the bow off in the game: " +
+            "do the arrows stay in the off-hand?",
+            s => BowAndShield(s, game));
+        return batch.Results;
+    }
+
+    private static void BowAndShield(SaveSession s, GameServices game)
+    {
+        var inv = new InventoryEditor(s, game.Shapes);
+        var purse = inv.Read().FirstOrDefault(i => i.Name == "o_inv_moneybag" && !i.Equipped)?.Index;
+        foreach (var item in inv.Read().Where(i => !i.Equipped && i.Index != purse).OrderByDescending(i => i.Index))
+            inv.Delete(item.Index);
+        void ToFreeSpot(string name)
+        {
+            var item = inv.Read().First(i => i.Name == name);
+            var spot = inv.FirstFit(item.W, item.H) ?? throw new InvalidOperationException($"No room in the bag for {name}");
+            inv.Move(item.Index, ItemPlace.InBag(spot.X, spot.Y));
+        }
+
+        ToFreeSpot("o_inv_leafshaped_bolts");
+        ToFreeSpot("Guard Crossbow");
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Peasant Bow", s.Root)), ItemPlace.Worn(GearRules.RightHand, 0));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("o_inv_arrows", s.Root)), ItemPlace.Worn(GearRules.LeftHand, 0));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Arna Sword", s.Root)), ItemPlace.Worn(GearRules.RightHand, 1));
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Board Shield", s.Root)), ItemPlace.Worn(GearRules.LeftHand, 1));
+    }
+
+    /// <summary>The items the catalog can make for this save: built from the tables, or copied from one already in it.</summary>
+    private static List<string> Suppliable(SaveSession s, GameServices game, IEnumerable<string> keys)
+    {
+        var available = game.Catalog.All(s.Root).Where(i => i.Availability != CatalogAvailability.Unavailable).Select(i => i.Key).ToHashSet();
+        return keys.Where(available.Contains).ToList();
+    }
+
+    private static void MovedGear(SaveSession s, GameServices game)
+    {
+        var inv = new InventoryEditor(s, game.Shapes);
+        // Room for every move whatever Velmir carries: keep one purse and one torch for the rearranging, drop the rest.
+        var keep = new[] { "o_inv_moneybag", "o_inv_torch" }
+            .Select(n => inv.Read().FirstOrDefault(i => i.Name == n && !i.Equipped)?.Index).OfType<int>().ToHashSet();
+        foreach (var item in inv.Read().Where(i => !i.Equipped && !keep.Contains(i.Index)).OrderByDescending(i => i.Index))
+            inv.Delete(item.Index);
+        int Index(string name) => inv.Read().First(i => i.Name == name).Index;
+        void ToFreeSpot(string name)
+        {
+            var item = inv.Read().First(i => i.Name == name);
+            var spot = inv.FirstFit(item.W, item.H) ?? throw new InvalidOperationException($"No room in the bag for {name}");
+            inv.Move(item.Index, ItemPlace.InBag(spot.X, spot.Y));
+        }
+
+        ToFreeSpot("Flat Kettle Helmet");
+        inv.Move(inv.Add(game.Catalog.CreateEntry("Hood", s.Root)), ItemPlace.Worn(GearRules.Head));
+        inv.Move(Index("Velmir Ring"), ItemPlace.Worn(GearRules.Ring2));
+        ToFreeSpot("o_inv_leafshaped_bolts");
+        inv.Move(Index("Voulge"), ItemPlace.Worn(GearRules.RightHand, 1));
+        inv.Move(Index("o_inv_leafshaped_bolts"), ItemPlace.Worn(GearRules.LeftHand, 0));
+        ToFreeSpot("o_inv_torch");
+        ToFreeSpot("o_inv_moneybag");
     }
 
     /// <summary>

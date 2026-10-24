@@ -22,8 +22,11 @@ internal sealed class BagGrid(int columns, int rows)
         return null;
     }
 
-    private bool Fits(int x, int y, int w, int h)
+    /// <summary>Whether a <paramref name="w"/> × <paramref name="h"/> item fits at (x, y) on free cells inside the grid.</summary>
+    public bool Fits(int x, int y, int w, int h)
     {
+        if (x < 0 || y < 0 || x + w > columns || y + h > rows)
+            return false;
         for (var cx = x; cx < x + w; cx++)
         for (var cy = y; cy < y + h; cy++)
             if (_taken[cx, cy])

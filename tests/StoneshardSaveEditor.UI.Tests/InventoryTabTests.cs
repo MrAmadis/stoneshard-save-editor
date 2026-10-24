@@ -1,6 +1,9 @@
 using Bunit;
+using StoneshardSaveEditor.Core.Editing;
 using StoneshardSaveEditor.GameData;
+using Microsoft.AspNetCore.Components.Web;
 using StoneshardSaveEditor.UI.Screens;
+using StoneshardSaveEditor.UI.Services;
 
 namespace StoneshardSaveEditor.Tests;
 
@@ -28,8 +31,9 @@ public class InventoryTabTests
         Assert.Contains("top:0px", style);
         Assert.Contains("height:108px", style);
         Assert.Null(moneybag.QuerySelector(".badge")); // no coins inside: its cached 2864 is stale
-        Assert.Contains("icon://s_inv_voulge", cut.Find(".doll [data-cell='weapon']").InnerHtml);
-        Assert.Contains("icon://s_inv_guardcrossbow", cut.Find(".doll [data-cell='set2']").InnerHtml);
+        Assert.Contains("icon://s_inv_voulge", cut.Find(".doll [data-cell='weapon-right']").InnerHtml);
+        Assert.Contains("icon://s_inv_guardcrossbow", cut.Find(".doll [data-cell='set2-right']").InnerHtml);
+        Assert.NotNull(cut.Find(".doll [data-cell='set2-left'] [data-item='o_inv_leafshaped_bolts']"));
     }
 
     [Fact]
@@ -161,4 +165,252 @@ public class InventoryTabTests
         Assert.True(add.HasAttribute("disabled"));
         Assert.Equal("Game files not found", add.GetAttribute("title"));
     }
+
+    private static AngleSharp.Dom.IElement Target(IRenderedComponent<Editor> cut, string slot, int set = 0) =>
+        cut.Find($".gear-slot[data-slot='{slot}'][data-set='{set}']");
+
+    private static AngleSharp.Dom.IElement AddToBag(EditorServiceTests.Harness h, IRenderedComponent<Editor> cut, string key)
+    {
+        h.Editor.AddItem(key);
+        return cut.WaitForElement($".bag [data-item='{key}']");
+    }
+
+    private static string Places(EditorServiceTests.Harness h) =>
+        string.Join(";", h.Editor.Current.Items.Select(i => $"{i.Name}@{i.Place}"));
+
+    [Fact]
+    public void Dragging_lights_the_slots_an_item_fits()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var hood = AddToBag(h, cut, "Hood");
+
+        hood.DragStart();
+        Assert.Contains("ok", Target(cut, GearRules.Head).ClassList);
+        Assert.Contains("no", Target(cut, GearRules.Feet).ClassList);
+
+        cut.Find(".bag [data-item='Hood']").DragEnd();
+        Assert.Empty(cut.FindAll(".gear-slot.ok, .gear-slot.no"));
+    }
+
+    [Fact]
+    public void Dropping_a_helmet_on_the_head_swaps_it()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        AddToBag(h, cut, "Hood").DragStart();
+
+        Target(cut, GearRules.Head).Drop();
+
+        Assert.Equal(GearRules.Head, h.Editor.Current.Items.Single(i => i.Name == "Hood").Slot);
+        Assert.False(h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet").Equipped);
+        Assert.Equal("Hood", cut.Find(".item-detail .head b").TextContent);
+    }
+
+    [Fact]
+    public void Dropping_where_the_game_wouldnt_allow_does_nothing()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        AddToBag(h, cut, "Hood").DragStart();
+        var before = Places(h);
+
+        Target(cut, GearRules.Feet).Drop();
+
+        Assert.Equal(before, Places(h));
+        Assert.Empty(cut.FindAll(".banner-error"));
+    }
+
+    [Fact]
+    public void Dropping_on_its_own_slot_does_nothing()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+
+        cut.Find(".doll [data-cell='head'] .equipped").DragStart();
+        Target(cut, GearRules.Head).Drop();
+
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void A_swapped_out_item_with_no_room_is_reported()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var voulge = h.Editor.Current.Items.Single(i => i.Name == "Voulge");
+        var bow = h.Editor.Catalog().First(c => c.Category == "bow" && c.Availability == CatalogAvailability.Ready && c.W * c.H < voulge.W * voulge.H);
+        AddToBag(h, cut, bow.Key);
+        // Fill every free cell, so the only room left is the bow's spot, smaller than the Voulge.
+        var small = h.Editor.Current.Items.First(i => !i.Equipped && i.W == 1 && i.H == 1).Index;
+        for (var i = 0; i < 50; i++)
+        {
+            try { h.Editor.DuplicateItem(small); }
+            catch (EditRejectedException) { break; }
+        }
+
+        cut.WaitForElement($".bag [data-item='{bow.Key}']").DragStart();
+        Target(cut, GearRules.RightHand).Drop();
+
+        Assert.Contains(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("Voulge had no room and was removed"));
+    }
+
+    /// <summary>The first free spot of the given size, counting every bag item as taken.</summary>
+    private static (int X, int Y) FreeSpot(EditorServiceTests.Harness h, int w, int hgt)
+    {
+        var bag = h.Editor.Current.Items.Where(i => !i.Equipped && i.X is not null).ToList();
+        return Enumerable.Range(0, InventoryEditor.BagRows - hgt + 1)
+            .SelectMany(y => Enumerable.Range(0, InventoryEditor.Columns - w + 1).Select(x => (X: x, Y: y)))
+            .First(p => !bag.Any(b => p.X < b.X + b.W && b.X < p.X + w && p.Y < b.Y + b.H && b.Y < p.Y + hgt));
+    }
+
+    private static AngleSharp.Dom.IElement BagCell(IRenderedComponent<Editor> cut, int x, int y) =>
+        cut.Find($".bag .cell[data-x='{x}'][data-y='{y}']");
+
+    private static ItemView Purse(EditorServiceTests.Harness h) => h.Editor.Current.Items.First(i => i.Name == "o_inv_moneybag");
+
+    [Fact]
+    public void The_outline_shows_where_an_item_would_land()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        var torch = h.Editor.Current.Items.First(i => i.Name == "o_inv_torch");
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        var outline = cut.Find(".bag .drop-outline");
+        Assert.Contains("fit", outline.ClassList);
+        Assert.Contains($"left:{spot.X * 54}px;top:{spot.Y * 54}px;width:54px;height:108px", outline.GetAttribute("style"));
+
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).DragEnter();
+        Assert.Contains("clash", cut.Find(".bag .drop-outline").ClassList);
+    }
+
+    [Fact]
+    public void Dropping_in_the_backpack_moves_an_item_to_a_free_spot()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        BagCell(cut, spot.X, spot.Y).Drop();
+
+        Assert.Equal(spot, (Purse(h).X!.Value, Purse(h).Y!.Value));
+        Assert.Empty(cut.FindAll(".bag .cell, .bag .drop-outline"));
+    }
+
+    [Fact]
+    public void Dropping_on_a_taken_spot_leaves_the_item_where_it_was()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var before = (Purse(h).X, Purse(h).Y);
+        var torch = h.Editor.Current.Items.First(i => i.Name == "o_inv_torch");
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).DragEnter();
+        BagCell(cut, torch.X!.Value, torch.Y!.Value).Drop();
+
+        Assert.Equal(before, (Purse(h).X, Purse(h).Y));
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void Unequipping_by_dropping_into_the_backpack()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+        var spot = FreeSpot(h, helmet.W, helmet.H);
+
+        cut.Find(".doll [data-cell='head'] .equipped").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        BagCell(cut, spot.X, spot.Y).Drop();
+
+        var moved = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+        Assert.Equal((false, spot.X, spot.Y), (moved.Equipped, moved.X!.Value, moved.Y!.Value));
+    }
+
+    [Fact]
+    public void Grabbing_an_item_by_its_lower_cell_keeps_that_offset()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 3);
+
+        cut.Find(".bag [data-item='o_inv_torch']").DragStart(new DragEventArgs { OffsetY = 1.5 * InventoryLayout.Cell });
+        BagCell(cut, spot.X, spot.Y + 1).DragEnter();
+
+        var outline = cut.Find(".bag .drop-outline");
+        Assert.Contains("fit", outline.ClassList);
+        Assert.Contains($"top:{spot.Y * 54}px", outline.GetAttribute("style"));
+    }
+
+    [Fact]
+    public void The_removal_banner_goes_when_the_changes_are_undone()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var voulge = h.Editor.Current.Items.Single(i => i.Name == "Voulge");
+        var bow = h.Editor.Catalog().First(c => c.Category == "bow" && c.Availability == CatalogAvailability.Ready && c.W * c.H < voulge.W * voulge.H);
+        AddToBag(h, cut, bow.Key);
+        var small = h.Editor.Current.Items.First(i => !i.Equipped && i.W == 1 && i.H == 1).Index;
+        for (var i = 0; i < 50; i++)
+        {
+            try { h.Editor.DuplicateItem(small); }
+            catch (EditRejectedException) { break; }
+        }
+        cut.WaitForElement($".bag [data-item='{bow.Key}']").DragStart();
+        Target(cut, GearRules.RightHand).Drop();
+        Assert.Contains(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("had no room"));
+
+        h.Editor.Reload();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain(cut.FindAll(".banner-warn"), b => b.TextContent.Contains("had no room")));
+    }
+
+    [Fact]
+    public void Hovering_the_equipment_clears_the_backpack_outline()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+        Assert.NotEmpty(cut.FindAll(".bag .drop-outline"));
+
+        Target(cut, GearRules.Head).DragEnter();
+
+        Assert.Empty(cut.FindAll(".bag .drop-outline"));
+    }
+
+    [Fact]
+    public void A_drag_that_ends_over_nothing_leaves_nothing_behind()
+    {
+        var (h, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+        var spot = FreeSpot(h, 1, 2);
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+        BagCell(cut, spot.X, spot.Y).DragEnter();
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragEnd();
+
+        Assert.Empty(cut.FindAll(".bag .cell, .bag .drop-outline, .gear-slot.ok, .gear-slot.no, .dragging"));
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void The_dragged_items_old_spot_shows_while_dragging()
+    {
+        var (_, ctx, cut) = OpenInventory();
+        using var _ctx = ctx;
+
+        cut.Find(".bag [data-item='o_inv_moneybag']").DragStart();
+
+        Assert.Contains("dragging", cut.Find(".bag [data-item='o_inv_moneybag']").ClassList);
+    }
 }
+

@@ -197,6 +197,26 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
 
     public SessionView DeleteItem(int index) => Edit(s => Inventory(s).Delete(index));
 
+    /// <summary>Moves an item in the bag or on and off the character (spec §5); see <see cref="InventoryEditor.Move"/>.</summary>
+    public MoveResult MoveItem(int index, ItemPlace to)
+    {
+        lock (_lock)
+        {
+            if (!Session.ReadOnly && Inventory(Session).Refusal(index, to) is null && !Inventory(Session).WouldMove(index, to))
+                return new MoveResult(index, null); // dropped where it already is: no edit at all
+        }
+        MoveResult? result = null;
+        Edit(s => result = Inventory(s).Move(index, to));
+        return result!;
+    }
+
+    /// <summary>Why an item can't move there, or null when it can; asks without changing anything.</summary>
+    public string? MoveRefusal(int index, ItemPlace to)
+    {
+        lock (_lock)
+            return Session.ReadOnly ? $"This save is read-only: {Session.ReadOnlyReason}" : Inventory(Session).Refusal(index, to);
+    }
+
     public SessionView DuplicateItem(int index) => Edit(s =>
     {
         RequireGame();
@@ -376,5 +396,7 @@ public sealed class EditorService(EditorOptions options, GameDataProvider game)
         public string SpriteFor(string itemName) => GameItemShapes.Missing;
 
         public int MaxStack(string itemName) => 0;
+
+        public string Kind(string itemName) => "";
     }
 }

@@ -8,26 +8,30 @@
 {
     <Banner Kind="warn">@Session.GoldNote</Banner>
 }
+@if (_removed is not null)
+{
+    <Banner Kind="warn">@_removed</Banner>
+}
 <div class="inventory">
     <section class="equipment">
         <h3>Equipped</h3>
         <div class="doll">
-            @foreach (var cell in Doll)
+            @foreach (var box in Doll)
             {
-                if (cell is null)
-                {
-                    <div></div>
-                    continue;
-                }
-                @GearSlot(cell.Id, cell.Label, cell.Tall, Session.Items.Where(i => i.Equipped && cell.Holds(i)).ToList())
+                <div class="gear-box">
+                    @foreach (var cell in box)
+                    {
+                        @GearSlot(cell, Session.Items.Where(cell.Holds).ToList())
+                    }
+                </div>
             }
         </div>
         @{
-            var others = Session.Items.Where(i => i.Equipped && !Doll.Any(c => c?.Holds(i) == true)).ToList();
+            var others = Session.Items.Where(i => i.Equipped && !Doll.SelectMany(b => b).Any(c => c.Holds(i))).ToList();
         }
         @if (others.Count > 0)
         {
-            <div class="doll-other">@GearSlot("other", "other", false, others)</div>
+            <div class="doll-other">@GearSlot(null, others)</div>
         }
     </section>
 
@@ -40,8 +44,9 @@
         <div class="bag" style="width:@(InventoryEditor.Columns * Cell + 2)px;height:@(Session.BagRows * Cell + 2)px">
             @foreach (var item in Session.Items.Where(i => !i.Equipped && i.X is not null))
             {
-                <button class="it @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name" title="@EditorService.ItemName(item.Name)"
+                <button class="it @(IsSelected(item) ? "sel" : "") @(_drag?.Index == item.Index ? "dragging" : "")" data-index="@item.Index" data-item="@item.Name" title="@EditorService.ItemName(item.Name)"
                         style="left:@(item.X * Cell)px;top:@(item.Y * Cell)px;width:@(item.W * Cell)px;height:@(item.H * Cell)px"
+                        draggable="true" @ondragstart="e => StartDrag(item, e)" @ondragend="EndDrag"
                         @onclick="() => Select(item)">
                     <Icon Sprite="@item.Sprite" Width="item.W * Cell" Height="item.H * Cell" Alt="@EditorService.ItemName(item.Name)" />
                     @if (InventoryLayout.Badge(item) is { } badge)
@@ -49,6 +54,24 @@
                         <span class="badge">@badge</span>
                     }
                 </button>
+            }
+            @if (_drag is { } drag)
+            {
+                @for (var y = 0; y < Session.BagRows; y++)
+                {
+                    for (var x = 0; x < InventoryEditor.Columns; x++)
+                    {
+                        var (cx, cy) = (x, y);
+                        <div class="cell" data-x="@cx" data-y="@cy" style="left:@(cx * Cell)px;top:@(cy * Cell)px"
+                             @ondragenter="() => _hover = (cx, cy)" @ondragover:preventDefault="true" @ondrop="() => DropInBag(cx, cy)"></div>
+                    }
+                }
+                @if (_hover is { } hover && Session.Items.ElementAtOrDefault(drag.Index) is { } dragged)
+                {
+                    var to = ItemPlace.InBag(hover.X - drag.GrabX, hover.Y - drag.GrabY);
+                    <div class="drop-outline @(EditorService.MoveRefusal(drag.Index, to) is null ? "fit" : "clash")"
+                         style="left:@(to.X * Cell)px;top:@(to.Y * Cell)px;width:@(dragged.W * Cell)px;height:@(dragged.H * Cell)px"></div>
+                }
             }
         </div>
     </section>
@@ -129,27 +152,52 @@
     private const int Cell = InventoryLayout.Cell;
     private const string Moneybag = "o_inv_moneybag";
 
-    /// <summary>One box of the equipment grid and the equipped items it shows.</summary>
-    private sealed record DollCell(string Id, string Label, bool Tall, Func<ItemView, bool> Holds);
+    /// <summary>One drop target of the equipment grid: a slot, in a weapon set for the hands.</summary>
+    private sealed record DollCell(string Id, string Label, bool Tall, string Slot, int Set = 0)
+    {
+        public ItemPlace Place => ItemPlace.Worn(Slot, Set);
 
-    private static bool InHand(ItemView i) => i.Slot is "o_inv_right_hand" or "o_inv_left_hand";
+        public bool Holds(ItemView item) => item.Equipped && item.Place == Place;
+    }
 
-    /// <summary>The game's layout, three columns wide: hands of weapon set 0 show as "weapon", set 1 as "set 2".</summary>
-    private static readonly DollCell?[] Doll =
+    /// <summary>
+    /// The game's layout, three boxes wide. Each weapon set's box holds the right hand and the left (weapon set 0 shows as
+    /// "weapon", set 1 as "set 2"), and the rings box holds both rings, so a drop picks the hand or the ring.
+    /// </summary>
+    private static readonly DollCell[][] Doll =
     [
-        new("neck", "neck", false, i => i.Slot == "o_inv_neck"),
-        new("head", "head", false, i => i.Slot == "o_inv_head"),
-        new("back", "back", false, i => i.Slot == "o_inv_back"),
-        new("weapon", "weapon", true, i => InHand(i) && (i.WeaponSet ?? 0) == 0),
-        new("body", "body", true, i => i.Slot == "o_inv_armor"),
-        new("set2", "set 2", true, i => InHand(i) && i.WeaponSet == 1),
-        new("hands", "hands", false, i => i.Slot == "o_inv_gloves"),
-        new("belt", "belt", false, i => i.Slot == "o_inv_belt"),
-        new("rings", "rings", false, i => i.Slot is "o_inv_ring_1" or "o_inv_ring_2"),
-        null,
-        new("feet", "feet", false, i => i.Slot == "o_inv_boots"),
-        null,
+        [new("neck", "neck", false, GearRules.Neck)],
+        [new("head", "head", false, GearRules.Head)],
+        [new("back", "back", false, GearRules.Back)],
+        [new("weapon-right", "weapon", true, GearRules.RightHand), new("weapon-left", "off-hand", true, GearRules.LeftHand)],
+        [new("body", "body", true, GearRules.Body)],
+        [new("set2-right", "set 2", true, GearRules.RightHand, 1), new("set2-left", "off-hand", true, GearRules.LeftHand, 1)],
+        [new("hands", "hands", false, GearRules.Hands)],
+        [new("belt", "belt", false, GearRules.Belt)],
+        [new("ring1", "ring", false, GearRules.Ring1), new("ring2", "ring", false, GearRules.Ring2)],
+        [],
+        [new("feet", "feet", false, GearRules.Feet)],
+        [],
     ];
+
+    /// <summary>The item being dragged, and which of its cells the pointer holds it by.</summary>
+    private sealed record Drag(int Index, int GrabX, int GrabY);
+
+    private Drag? _drag;
+    private (int X, int Y)? _hover;
+    private string? _removed;
+    private int _changes;
+
+    /// <summary>Whether the dragged item may go in each slot, worked out once when the drag starts.</summary>
+    private Dictionary<DollCell, bool>? _fits;
+
+    /// <summary>The removal notice belongs to the edit that made it: undoing or reloading drops it.</summary>
+    protected override void OnParametersSet()
+    {
+        if (Session.ChangeCount < _changes)
+            _removed = null;
+        _changes = Session.ChangeCount;
+    }
 
     /// <summary>Where an item is: its bag cell, or its equipment slot and weapon set. Unlike its list index, this stays
     /// the same when other items are added or deleted.</summary>
@@ -167,14 +215,18 @@
 
     private void Select(ItemView item) => _selected = PlaceOf(item);
 
-    private RenderFragment GearSlot(string id, string label, bool tall, List<ItemView> items) =>
-        @<div class="gear-slot @(tall ? "tall" : "")" data-cell="@id">
-            <span class="lbl">@label</span>
+    /// <summary>A box of the equipment grid; <paramref name="cell"/> is null for gear in slots the grid doesn't show.</summary>
+    private RenderFragment GearSlot(DollCell? cell, List<ItemView> items) =>
+        @<div class="gear-slot @(cell?.Tall == true ? "tall" : "") @DropClass(cell)" data-cell="@(cell?.Id ?? "other")"
+              data-slot="@cell?.Slot" data-set="@cell?.Set"
+              @ondragenter="() => _hover = null" @ondragover:preventDefault="true" @ondrop="() => DropOn(cell)">
+            <span class="lbl">@(cell?.Label ?? "other")</span>
             @foreach (var item in items)
             {
-                var (w, h) = InventoryLayout.Fit(item.W, item.H, 104.0 / items.Count, tall ? 156 : 100);
-                <button class="equipped @(IsSelected(item) ? "sel" : "")" data-index="@item.Index" data-item="@item.Name"
-                        title="@EditorService.ItemName(item.Name)" @onclick="() => Select(item)">
+                var (w, h) = InventoryLayout.Fit(item.W, item.H, BoxWidth(cell) / items.Count, cell?.Tall == true ? 156 : 100);
+                <button class="equipped @(IsSelected(item) ? "sel" : "") @(_drag?.Index == item.Index ? "dragging" : "")" data-index="@item.Index" data-item="@item.Name"
+                        title="@EditorService.ItemName(item.Name)" draggable="true" @ondragstart="() => StartDrag(item, null)" @ondragend="EndDrag"
+                        @onclick="() => Select(item)">
                     <Icon Sprite="@item.Sprite" Width="w" Height="h" Alt="@EditorService.ItemName(item.Name)" />
                     @if (InventoryLayout.Badge(item) is { } badge)
                     {
@@ -187,6 +239,56 @@
                 </button>
             }
         </div>;
+
+    /// <summary>Room for icons: a full box, or half of one for a hand or a ring.</summary>
+    private static double BoxWidth(DollCell? cell) => cell is not null && Doll.Any(b => b.Length == 2 && b.Contains(cell)) ? 50 : 104;
+
+    /// <summary>While dragging, whether the item may go in this slot: lit (<c>ok</c>) or faded (<c>no</c>).</summary>
+    private string DropClass(DollCell? cell) =>
+        _fits is null || cell is null ? "" : _fits[cell] ? "ok" : "no";
+
+    private void StartDrag(ItemView item, DragEventArgs? e)
+    {
+        var grabX = e is null ? 0 : Math.Clamp((int)(e.OffsetX / Cell), 0, item.W - 1);
+        var grabY = e is null ? 0 : Math.Clamp((int)(e.OffsetY / Cell), 0, item.H - 1);
+        _drag = new Drag(item.Index, grabX, grabY);
+        _fits = Doll.SelectMany(b => b).ToDictionary(c => c, c => EditorService.MoveRefusal(item.Index, c.Place) is null);
+    }
+
+    private void EndDrag()
+    {
+        _drag = null;
+        _hover = null;
+        _fits = null;
+    }
+
+    /// <summary>A drop on a backpack cell lands the item with the cell it was grabbed by under the pointer.</summary>
+    private void DropInBag(int x, int y)
+    {
+        if (_drag is { } drag)
+            MoveDragged(ItemPlace.InBag(x - drag.GrabX, y - drag.GrabY));
+    }
+
+    private void DropOn(DollCell? cell)
+    {
+        if (cell is not null)
+            MoveDragged(cell.Place);
+    }
+
+    /// <summary>Moves the dragged item if it may go there (a refused drop does nothing), and selects it.</summary>
+    private void MoveDragged(ItemPlace to)
+    {
+        var drag = _drag;
+        EndDrag();
+        if (drag is null || EditorService.MoveRefusal(drag.Index, to) is not null)
+            return;
+        Edit(() =>
+        {
+            var result = EditorService.MoveItem(drag.Index, to);
+            _selected = PlaceOf(EditorService.Current.Items[result.Index]);
+            _removed = result.Removed is { } name ? $"{EditorService.ItemName(name)} had no room and was removed" : null;
+        });
+    }
 
     private static string Percent(double value, double max) =>
         (Math.Clamp(value / max, 0, 1) * 100).ToString("0.#", CultureInfo.InvariantCulture);

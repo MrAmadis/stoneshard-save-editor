@@ -19,7 +19,7 @@ public class CatalogTests
     private static ItemCatalog Catalog() =>
         new(GameFiles.Tables, GameFiles.Localization, GameFiles.Sprites, GameFiles.Objects);
 
-    private static GameItemShapes Shapes() => new(GameFiles.Sprites, GameFiles.Objects, GameFiles.Tables.ItemsStats);
+    private static GameItemShapes Shapes() => new(GameFiles.Sprites, GameFiles.Objects, GameFiles.Tables);
 
     private static GmObject LoadSave(string file) =>
         (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(file)).Json);
@@ -276,4 +276,16 @@ public class CatalogTests
         Assert.Equal((100, 20, 0, 0), (shapes.MaxStack("o_inv_gold"), shapes.MaxStack("o_inv_leafshaped_bolts"),
             shapes.MaxStack("o_inv_salve"), shapes.MaxStack("Guard Crossbow")));
     }
+
+    [Theory]
+    [InlineData("Flat Kettle Helmet", "Head")]
+    [InlineData("Voulge", "2haxe")]
+    [InlineData("Guard Crossbow", "crossbow")]
+    [InlineData("Board Shield", "shield")]
+    [InlineData("Velmir Ring", "Ring")]
+    [InlineData("o_inv_leafshaped_bolts", "ammo")]
+    [InlineData("o_inv_torch", "tool")]
+    [InlineData("o_inv_cheese", "food")]
+    [InlineData("o_inv_no_such_item", "")]
+    public void Item_kinds_come_from_the_tables(string name, string kind) => Assert.Equal(kind, Shapes().Kind(name));
 }

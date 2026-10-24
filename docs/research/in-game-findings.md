@@ -96,7 +96,22 @@ Every reading of the 21 trees has now held in-game.
 
 Test characters are now written as `save_1` instead of `exitsave_1`, since loading an exit save consumes it; `Lab keep-save` copies a played test character's slot to its next `save_N`.
 
+## Session G — 2026-10-24
+
+Inventory drag and drop (spec `docs/superpowers/specs/2026-10-23-inventory-drag-and-drop-design.md` §7). Built with `Lab make-session-g` from Velmir's newest save as `character_6` and `character_7`, both regular `save_1` saves.
+
+| Character | What the editor did | Observation (owner) | Decision |
+|---|---|---|---|
+| G1 `character_6` | Bag emptied but for a purse and a torch; helmet off into the bag, Hood on, rings swapped, crossbow and bolts moved to the first weapon set and the Voulge to the second, purse and torch moved | "It works" | The game takes gear the editor moves: worn entries written as `f2` −4, `cell` −4, `f7` true (non-hand slots and the active set's hands) or 0 (the other set), `weaponSet`, `slot`. The drag and drop UI goes ahead. |
+| G2 `character_7` | Sling, lute, pickaxe, chain, sickle, bow, arrows and a torch in the bag (no sling bullets: the live save has none to copy) | The sling goes in either hand; the lute, the chain and the pickaxe take both hands but can be put on either; the torch and the sickle take one hand, either. Stones picked up in the game went in the sling's other hand as its ammo (exit save: sling in set 0's right hand, stones in its left with `f7` 2, `f4` 2). | Those slots added to the editor's rules; a two-handed item dropped on either hand goes in the right. Bows with arrows weren't reported. |
+
+The Voulge's kind in the game's tables is `2haxe`, not `spear`.
+
+The game marks an item in the active weapon set's left hand with `f7` 2: Jorgrim's off-hand axe (his own saves) and `character_7`'s sling stones. The editor writes the same.
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
+- Session H (`character_8`, built 2026-10-24): a bow with a fresh arrow stack equipped by the editor (`f4` 0); a sword and a shield; whether the arrows stay in the off-hand once the bow comes off (the editor refuses that for now).
+- A wand (the editor can't make one yet).
 - That the game keeps a test character's `save_1` when it loads it (after session F `character_5/save_1` was untouched, but it isn't known which save was loaded).

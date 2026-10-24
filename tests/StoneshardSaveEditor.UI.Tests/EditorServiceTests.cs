@@ -287,4 +287,65 @@ public class EditorServiceTests
     [InlineData("A+B|C", "A, and B or C")]
     public void Conditions_read_as_a_sentence(string conditions, string expected) =>
         Assert.Equal(expected, Names.Conditions(conditions.Split('+').Select(c => c.Split('|')).ToList()));
+
+    [Fact]
+    public void Moving_an_item_updates_the_view()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        h.Editor.Open("character_2", "exitsave_1");
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+        var bag = h.Editor.Current.Items.Where(i => !i.Equipped && i.X is not null).ToList();
+        var spot = Enumerable.Range(0, InventoryEditor.BagRows - helmet.H + 1)
+            .SelectMany(y => Enumerable.Range(0, InventoryEditor.Columns - helmet.W + 1).Select(x => (X: x, Y: y)))
+            .First(p => !bag.Any(b => p.X < b.X + b.W && b.X < p.X + helmet.W && p.Y < b.Y + b.H && b.Y < p.Y + helmet.H));
+
+        var result = h.Editor.MoveItem(helmet.Index, ItemPlace.InBag(spot.X, spot.Y));
+
+        var moved = h.Editor.Current.Items[result.Index];
+        Assert.Equal(("Flat Kettle Helmet", false, spot.X, spot.Y), (moved.Name, moved.Equipped, moved.X!.Value, moved.Y!.Value));
+        Assert.Equal(1, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void Asking_whether_a_move_is_allowed_changes_nothing()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        h.Editor.Open("character_2", "exitsave_1");
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+
+        Assert.Equal("That doesn't go there", h.Editor.MoveRefusal(helmet.Index, ItemPlace.Worn(GearRules.Feet)));
+        Assert.Equal(0, h.Editor.Current.ChangeCount);
+    }
+
+    [Fact]
+    public void Dropping_an_item_where_it_is_does_no_edit()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        h.Editor.Open("character_2", "exitsave_1");
+        var changed = 0;
+        h.Editor.Changed += () => changed++;
+        var helmet = h.Editor.Current.Items.Single(i => i.Name == "Flat Kettle Helmet");
+
+        var result = h.Editor.MoveItem(helmet.Index, ItemPlace.Worn(GearRules.Head));
+
+        Assert.Equal(new MoveResult(helmet.Index, null), result);
+        Assert.Equal(0, changed);
+    }
+
+    [Fact]
+    public void In_a_read_only_save_nothing_can_be_moved()
+    {
+        var h = Start(gameDir: Fixtures.GameDir);
+        var mapFile = Path.Combine(h.Root, "character_2", "save_1", "save.map");
+        var map = (GmObject)GmJson.Parse(SaveCodec.Decode(File.ReadAllBytes(mapFile)).Json);
+        map.Set("wipeVersion", GmString.From("0.10"));
+        File.WriteAllBytes(mapFile, SaveCodec.Encode(GmJson.Write(map), Salt.For(SaveFileKind.SlotFile, "character_2", "save_1")));
+        h.Editor.Open("character_2", "save_1");
+        var head = h.Editor.Current.Items.First(i => i.Slot == GearRules.Head);
+        var spot = h.Editor.Current.Items.Where(i => i.Equipped).First(i => i.Slot == GearRules.Ring1);
+
+        Assert.StartsWith("This save is read-only", h.Editor.MoveRefusal(head.Index, ItemPlace.Worn(GearRules.Head)));
+        Assert.StartsWith("This save is read-only", h.Editor.MoveRefusal(spot.Index, ItemPlace.Worn(GearRules.Ring2)));
+    }
 }
+
