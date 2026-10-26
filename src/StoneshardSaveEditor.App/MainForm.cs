@@ -15,6 +15,7 @@ internal sealed class MainForm : Form
     public MainForm()
     {
         Text = "Stoneshard Save Editor";
+        Icon = new Icon(typeof(MainForm).Assembly.GetManifestResourceStream("app.ico")!);
         ClientSize = new Size(1280, 820);
         MinimumSize = new Size(1100, 720);
         BackColor = Color.FromArgb(0x1b, 0x18, 0x15);

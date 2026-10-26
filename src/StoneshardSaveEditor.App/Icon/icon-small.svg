@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- The app icon at 16 to 24 px: icon.svg without the glow, runes and sparkles, with a thicker ring and a bigger crystal. -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe7a3"/>
+      <stop offset="1" stop-color="#d9a23f"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="110" fill="none" stroke="#5e3a0c" stroke-width="32"/>
+  <circle cx="128" cy="128" r="110" fill="none" stroke="url(#gold)" stroke-width="22"/>
+
+  <g transform="translate(25.6,23.2) scale(0.8)">
+    <path d="M128 30 L214 80 L128 130 L42 80 Z" fill="#cfa9ff"/>
+    <path d="M42 80 L128 130 L128 232 L42 182 Z" fill="#7a3ddc"/>
+    <path d="M128 130 L214 80 L214 182 L128 232 Z" fill="#3f128a"/>
+    <path d="M42 80 L128 130 L214 80 M128 130 V232" fill="none" stroke="#f1e4ff" stroke-width="7"/>
+    <path d="M128 30 L214 80 L214 182 L128 232 L42 182 L42 80 Z" fill="none" stroke="#150430" stroke-width="12" stroke-linejoin="round"/>
+  </g>
+</svg>
