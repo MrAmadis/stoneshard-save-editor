@@ -7,6 +7,8 @@
     <AssemblyName>StoneshardSaveEditor</AssemblyName>
     <RootNamespace>StoneshardSaveEditor.App</RootNamespace>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- Built by tools/make-icon.ps1 from Icon/icon.svg and Icon/icon-small.svg. -->
+    <ApplicationIcon>Icon\app.ico</ApplicationIcon>
     <!-- The WebView2 package ships a WPF assembly whose WindowsBase reference overlaps the WinForms one; harmless. -->
     <NoWarn>$(NoWarn);MSB3277</NoWarn>
     <!-- BlazorWebView serves index.html and _content/ from files beside the app, so a single-file exe extracts them on first run. -->
@@ -15,6 +17,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StoneshardSaveEditor.UI\StoneshardSaveEditor.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The window loads it too: without it, the title bar and taskbar show WinForms' default icon. -->
+    <EmbeddedResource Include="Icon\app.ico" LogicalName="app.ico" />
   </ItemGroup>
 
   <ItemGroup>
