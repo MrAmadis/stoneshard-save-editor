@@ -35,6 +35,8 @@ public sealed class DataWinFile
     public (int Offset, int Length) Chunk(string name) =>
         _chunks.TryGetValue(name, out var chunk) ? chunk : throw new InvalidDataException($"data.win has no {name} chunk");
 
+    public bool HasChunk(string name) => _chunks.TryGetValue(name, out var chunk) && chunk.Length > 0;
+
     public uint U32(int offset) => BinaryPrimitives.ReadUInt32LittleEndian(_bytes.AsSpan(offset));
 
     public int I32(int offset) => BinaryPrimitives.ReadInt32LittleEndian(_bytes.AsSpan(offset));

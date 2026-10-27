@@ -100,9 +100,9 @@ public sealed class GameDataProvider(Func<string?> configuredDir, string cacheRo
         var dataWin = DataWinFile.Load(dataWinPath);
         var sprites = new SpriteTable(dataWin);
         var objects = new ObjectTable(dataWin, sprites);
-        var exe = File.ReadAllBytes(Path.Combine(gameDir, "StoneShard.exe"));
-        var tables = ExeTables.Parse(exe);
-        var localization = Localization.Parse(exe);
+        var strings = GameStrings.Load(gameDir, dataWin);
+        var tables = ExeTables.Parse(strings);
+        var localization = Localization.Parse(strings);
         var icons = new IconService(sprites, new TexturePages(dataWin), IconService.CacheDirFor(cacheRoot, dataWinPath));
         return new GameFiles(gameDir, objects, tables, localization, icons,
             new GameItemShapes(sprites, objects, tables), new ItemCatalog(tables, localization, sprites, objects));

@@ -25,8 +25,8 @@ public sealed class GameServices
     {
         var dataWin = DataWinFile.Load(Path.Combine(gameDir, "data.win"));
         var sprites = new SpriteTable(dataWin);
-        var exe = File.ReadAllBytes(Path.Combine(gameDir, "StoneShard.exe"));
-        return new GameServices(sprites, new ObjectTable(dataWin, sprites), ExeTables.Parse(exe), Localization.Parse(exe));
+        var strings = GameStrings.Load(gameDir, dataWin);
+        return new GameServices(sprites, new ObjectTable(dataWin, sprites), ExeTables.Parse(strings), Localization.Parse(strings));
     }
 
     public SkillCatalog SkillsFor(GmObject saveRoot) => SkillCatalog.Build(saveRoot, Tables, Localization, Objects);
