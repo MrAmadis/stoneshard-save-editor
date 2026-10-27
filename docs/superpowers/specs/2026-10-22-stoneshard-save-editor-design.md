@@ -233,6 +233,8 @@ Icon extraction is proven. `docs/research/extract_icons_spike.py` is a throwaway
 - **Localized names** in about 12 languages, and descriptions.
 - Column headers and the exact layout have not been mapped yet.
 
+The Steam `modbranch` (the one mods need) is a VM build instead: its `StoneShard.exe` is the stock runner, and `data.win` gains CODE, VARI and FUNC chunks. The same strings sit in `STRG`, but each table is stored bottom-up with its header last, because the VM compiler pushes an array literal's elements last-first. `GameStrings` reverses every run of strings with the same `;` count. Checked on build 24781431: all four tables and every English name match the YYC exe.
+
 ## 8. The product (owner-approved screens)
 
 The approved mockups are in `docs/superpowers/specs/mockups/`. Their images came from the game and aren't committed, so the pages render without icons; the layouts still read clearly.

@@ -3,8 +3,8 @@ using System.Text;
 namespace StoneshardSaveEditor.GameData;
 
 /// <summary>
-/// The game's data tables, which the native (YYC) build keeps in <c>StoneShard.exe</c> as consecutive
-/// NUL-terminated strings: a header row followed by rows with the same number of <c>;</c> separators.
+/// The game's data tables, found in its <see cref="GameStrings"/> as consecutive NUL-terminated strings:
+/// a header row followed by rows with the same number of <c>;</c> separators.
 /// </summary>
 public sealed class ExeTables
 {
