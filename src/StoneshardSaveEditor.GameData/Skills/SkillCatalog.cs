@@ -17,7 +17,7 @@ public sealed record TreeLayout(IReadOnlyDictionary<string, SkillPosition> Skill
 
 /// <summary>
 /// The skill trees: which skill belongs where, its English name and icon, plus hand-made data observed in-game
-/// (<c>tree-unlocks.json</c>: what each treatise opens; <c>skill-trees.json</c>: layout and prerequisites).
+/// (<c>skill-trees.json</c>: layout and prerequisites; each treatise volume opens one row of it).
 /// </summary>
 public sealed partial class SkillCatalog
 {
@@ -52,16 +52,13 @@ public sealed partial class SkillCatalog
     };
 
     private readonly Dictionary<string, SkillTree> _treeOf;
-    private readonly Dictionary<string, string[]> _unlocks;
     private readonly Dictionary<string, TreeLayout> _layouts;
     private readonly Dictionary<string, int> _volumes;
 
-    private SkillCatalog(IReadOnlyList<SkillTree> trees, Dictionary<string, string[]> unlocks, Dictionary<string, TreeLayout> layouts,
-        Dictionary<string, int> volumes)
+    private SkillCatalog(IReadOnlyList<SkillTree> trees, Dictionary<string, TreeLayout> layouts, Dictionary<string, int> volumes)
     {
         Trees = trees;
         _treeOf = trees.SelectMany(t => t.Skills.Select(s => (s.Object, t))).ToDictionary(x => x.Object, x => x.t);
-        _unlocks = unlocks;
         _layouts = layouts;
         _volumes = volumes;
     }
@@ -92,9 +89,14 @@ public sealed partial class SkillCatalog
 
     public SkillTree TreeOf(string obj) => _treeOf[obj];
 
-    /// <summary>Skills that opening a closed tree unlocks: what reading its Volume I unlocked in-game; empty until observed.</summary>
+    /// <summary>
+    /// Skills that opening a closed tree unlocks, as reading its Volume I does: that volume's row, plus the rows above it a
+    /// tree with fewer volumes than rows (Survival) has open from the start. Matches every Volume I read in-game (sessions A4, B).
+    /// </summary>
     public IReadOnlyList<string> UnlockSet(string treeId) =>
-        Trees.FirstOrDefault(t => t.Id == treeId)?.TreatisePrefix is { } prefix ? FirstVolume(_unlocks, prefix) : [];
+        Volumes(treeId) > 0 && Layout(treeId) is { } layout
+            ? layout.Skills.Where(s => s.Value.Row <= Offset(treeId)).Select(s => s.Key).ToList()
+            : [];
 
     public TreeLayout? Layout(string treeId) => _layouts.GetValueOrDefault(treeId);
 
@@ -109,10 +111,6 @@ public sealed partial class SkillCatalog
 
     private List<string> FirstTier(string treeId) =>
         Layout(treeId)?.Skills.Where(s => s.Value.Requires.Length == 0).Select(s => s.Key).ToList() ?? [];
-
-    /// <summary>Volume I's unlocks for a treatise prefix ("pyro" → "pyro1"); later volumes unlock the later rows.</summary>
-    public static IReadOnlyList<string> FirstVolume(IReadOnlyDictionary<string, string[]> unlocks, string prefix) =>
-        unlocks.GetValueOrDefault($"{prefix}1") ?? [];
 
     /// <summary>
     /// The save lists every skill grouped by tree: a block of passives followed by its actives. A block's tree is the
@@ -176,7 +174,7 @@ public sealed partial class SkillCatalog
 
         var volumes = trees.Where(t => t.TreatisePrefix is not null).ToDictionary(t => t.Id,
             t => Enumerable.Range(1, 9).TakeWhile(n => tables.ItemsStats.Find($"treatise_{t.TreatisePrefix}{n}") is not null).Count());
-        return new SkillCatalog(trees, LoadUnlocks(), LoadLayouts(), volumes);
+        return new SkillCatalog(trees, LoadLayouts(), volumes);
     }
 
     private static SkillTree Tree(string id, IReadOnlyList<SkillInfo> skills)
@@ -187,9 +185,6 @@ public sealed partial class SkillCatalog
 
     private static string TitleCase(string stem) =>
         CultureInfo.InvariantCulture.TextInfo.ToTitleCase(stem.Replace('_', ' ').ToLowerInvariant());
-
-    private static Dictionary<string, string[]> LoadUnlocks() =>
-        JsonSerializer.Deserialize<Dictionary<string, string[]>>(Resource("tree-unlocks.json")) ?? [];
 
     private static Dictionary<string, TreeLayout> LoadLayouts()
     {

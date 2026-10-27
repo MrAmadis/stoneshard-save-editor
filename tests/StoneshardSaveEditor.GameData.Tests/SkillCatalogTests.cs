@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using StoneshardSaveEditor.Core.Files;
 using StoneshardSaveEditor.Core.Json;
 using StoneshardSaveEditor.GameData;
@@ -69,36 +71,30 @@ public class SkillCatalogTests
     }
 
     [Fact]
-    public void Unlock_sets_come_from_observed_treatise_reads()
+    public void Unlock_sets_and_tiers_match_every_treatise_read_in_game()
     {
-        // Observed in-game 2026-10-22: reading Pyromancy Treatise I unlocked exactly these.
-        Assert.Equal(
-            new[] { "o_pass_skill_baptism_of_fire", "o_pass_skill_flame_saturation", "o_skill_fire_barrage_ico", "o_skill_flame_ring_ico" },
-            Skills.UnlockSet("pyromancy").Order());
-        Assert.Empty(Skills.UnlockSet("combat")); // already open on Velmir, never read
+        // tree-unlocks.json: what reading each book unlocked in-game (sessions A4 and B), keyed like "pyro1" for Pyromancy I.
+        var observed = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "tree-unlocks.json")))!;
+        Assert.Equal(14, observed.Count);
+        foreach (var (book, unlocked) in observed)
+        {
+            var match = Regex.Match(book, @"^(\D+)(\d+)$");
+            var tree = Skills.Trees.Single(t => t.TreatisePrefix == match.Groups[1].Value);
+            var volume = int.Parse(match.Groups[2].Value);
+            Assert.True(Skills.TierSkills(tree.Id, volume).ToHashSet().SetEquals(unlocked), $"{book}: tier differs");
+            if (volume == 1)
+                Assert.True(Skills.UnlockSet(tree.Id).ToHashSet().SetEquals(unlocked), $"{book}: unlock set differs");
+        }
         Assert.Empty(Skills.UnlockSet("basic"));
         Assert.Throws<KeyNotFoundException>(() => Skills.TreeOf("o_skill_not_real_ico"));
     }
 
-    [Fact]
-    public void Every_unlock_entry_belongs_to_its_treatises_tree()
-    {
-        foreach (var tree in Skills.Trees.Where(t => t.TreatisePrefix is not null))
-            Assert.All(Skills.UnlockSet(tree.Id), s => Assert.Equal(tree.Id, Skills.TreeOf(s).Id));
-        Assert.Equal(36, Skills.Trees.Sum(t => Skills.UnlockSet(t.Id).Count));
-    }
-
-    [Fact]
-    public void Unlock_set_is_what_Volume_I_unlocks()
-    {
-        // Later volumes unlock the later rows (session B), which the game also opens once their prerequisites are learned.
-        var unlocks = new Dictionary<string, string[]>
-        {
-            ["pyro1"] = ["o_skill_flame_ring_ico", "o_pass_skill_pyromania"],
-            ["pyro2"] = ["o_skill_melting_ray_ico"],
-            ["geo1"] = ["o_skill_stone_armor_ico"],
-        };
-        Assert.Equal(new[] { "o_pass_skill_pyromania", "o_skill_flame_ring_ico" }, SkillCatalog.FirstVolume(unlocks, "pyro").Order());
-        Assert.Empty(SkillCatalog.FirstVolume(unlocks, "electro"));
-    }
+    [Theory]
+    // Open on Velmir, so never read in-game: Volume I opens the first row, as everywhere it was read.
+    [InlineData("shield", "o_pass_skill_moment_of_retribution, o_pass_skill_ultimate_resilience, o_skill_breakthrough_ico, o_skill_raise_shield_ico")]
+    [InlineData("axe", "o_pass_skill_ferocity, o_pass_skill_show_no_mercy, o_skill_crippling_lunge_ico, o_skill_cut_through_ico")]
+    [InlineData("mace", "o_pass_skill_dazing_strikes, o_pass_skill_moment_of_weakness, o_skill_armor_break_ico, o_skill_onslaught_ico")]
+    public void Trees_never_read_in_game_unlock_their_first_row(string treeId, string firstRow) =>
+        Assert.Equal(firstRow.Split(", "), Skills.UnlockSet(treeId).Order());
 }
