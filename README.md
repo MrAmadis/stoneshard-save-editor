@@ -112,7 +112,7 @@ dotnet run --project src/StoneshardSaveEditor.App
 dotnet test --solution StoneshardSaveEditor.slnx
 
 # Build the single-file exe the releases ship, into artifacts\StoneshardSaveEditor.exe
-dotnet publish src/StoneshardSaveEditor.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=1.0.1 -o artifacts
+dotnet publish src/StoneshardSaveEditor.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=1.0.2 -o artifacts
 ```
 
 Some tests need the game installed and skip when it isn't. They look for it in `D:\SteamLibrary\steamapps\common\Stoneshard`; point them elsewhere with the `STONESHARD_DIR` environment variable. Tests that need a snapshot of real saves (`tests/fixtures/real/`, not in the repository) skip as well.

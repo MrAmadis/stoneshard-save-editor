@@ -310,12 +310,12 @@ public static class Experiments
         skills.Unlock(["o_pass_skill_fatal_hit"]);
     }
 
-    /// <summary>Opens every tree with unlock data the way reading Volume I does, then learns every skill for free.</summary>
+    /// <summary>Opens every tree the way reading Volume I does, then learns every skill for free.</summary>
     private static void LearnEverything(SaveSession s, GameServices game)
     {
         var catalog = game.SkillsFor(s.Root);
         var skills = new SkillsEditor(s);
-        foreach (var tree in catalog.Trees.Where(t => t.TreatisePrefix is not null && catalog.UnlockSet(t.Id).Count > 0))
+        foreach (var tree in catalog.Trees.Where(t => t.TreatisePrefix is not null))
             skills.UnlockTree(catalog.UnlockSet(tree.Id), $"treatise_{tree.TreatisePrefix}1");
         var learned = skills.Read().Where(x => x.Learned).Select(x => x.Object).ToHashSet();
         foreach (var obj in catalog.Trees.SelectMany(t => t.Skills).Select(k => k.Object).Where(o => !learned.Contains(o)))

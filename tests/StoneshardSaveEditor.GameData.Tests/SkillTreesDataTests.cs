@@ -42,13 +42,11 @@ public class SkillTreesDataTests
     }
 
     [Fact]
-    public void First_tier_matches_tree_unlocks()
+    public void Unlocking_a_tree_opens_its_first_tier()
     {
         foreach (var tree in TreesWithTreatise())
         {
             var unlocks = Catalog.Value.UnlockSet(tree.Id);
-            if (unlocks.Count == 0)
-                continue;
             var firstTier = Catalog.Value.Layout(tree.Id)!.Skills.Where(s => s.Value.Requires.Length == 0).Select(s => s.Key);
             Assert.True(firstTier.ToHashSet().SetEquals(unlocks), $"{tree.Id}: first tier differs from the Volume I unlocks");
         }
