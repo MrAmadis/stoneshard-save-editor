@@ -119,6 +119,14 @@ Built with `Lab make-session-h` as `character_8`: bag emptied but for the purse,
 | Taking the bow off in the game | As soon as the bow was dragged the arrows came off, and they stayed off when it went back. | Ammunition comes off with its weapon. The editor does the same instead of refusing the move. |
 | Sword off, then a bow equipped | The shield stayed when the sword came off; equipping the bow took the shield off. | A two-handed item takes the other hand off. The editor does the same instead of refusing; it also takes a two-handed item off when something goes into the other hand (assumed alike, not seen). |
 
+## Session I — 2026-10-27
+
+Version 1.0.2: **Unlock tree** opens a closed tree's first row from `skill-trees.json` instead of from `tree-unlocks.json`, which only had the 11 trees read in session A4.
+
+| Check | Observation (owner) | Decision |
+|---|---|---|
+| Unlock tree on Shields, Axes or Maces (no recorded read), then load the save | "It works" | Volume I opens the first row on trees never read in testing too. `tree-unlocks.json` stays as a test record of the reads. |
+
 ### Still open
 
 - Steam Cloud: does an edited save survive a full Steam restart? (No cloud prompt reported.)
